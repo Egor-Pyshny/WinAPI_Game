@@ -2,6 +2,8 @@
 #define UNICODE
 #endif 
 
+#pragma comment(lib, "ws2_32.lib")
+#include <WS2tcpip.h>
 //#include <iostream>
 //#include <stdio.h>
 //#include <wchar.h>
@@ -14,6 +16,7 @@
 #include "Resource.h"
 #include "Scope.h"
 #include "Target.h"
+#include <queue>
 #include "Bullet.h"
 #include <windowsx.h>
 
@@ -23,6 +26,8 @@ using namespace std;
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 void InitializePhotos();
 DWORD WINAPI InitilizeTargets(LPVOID lpParam);
+DWORD WINAPI GetData(LPVOID lpParam);
+DWORD WINAPI RefreshPosition(LPVOID lpParam);
 
 Bitmap* imageList[target::types];
 const int max_bullets_to_draw = 50;
@@ -35,6 +40,7 @@ Bitmap* scope_png = NULL;
 HANDLE g_mutex;
 vector<target> targets;
 target* current_target = NULL;
+queue<Point> points;
 const UINT_PTR fps_timer_id = 1;
 const UINT_PTR draw_timer_id = 2;
 const int WINDOW_WIDTH = 900;
@@ -92,6 +98,14 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
     ShowWindow(hwnd, nCmdShow);
     UpdateWindow(hwnd);
     MSG msg;
+    HANDLE data_thread = CreateThread(nullptr, 0, GetData, NULL, 0, nullptr);
+    if (data_thread == NULL) {
+        return 1;
+    }
+    HANDLE refresh_thread = CreateThread(nullptr, 0, RefreshPosition, NULL, 0, nullptr);
+    if (refresh_thread == NULL) {
+        return 1;
+    }
     while (GetMessage(&msg, NULL, 0, 0)) {
         TranslateMessage(&msg);
         DispatchMessage(&msg);
@@ -99,6 +113,8 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
 
     GdiplusShutdown(gdiplusToken);
     CloseHandle(hThread);
+    CloseHandle(data_thread);
+    CloseHandle(refresh_thread);
     CloseHandle(g_mutex);
     return (int)msg.wParam;
 }
@@ -108,6 +124,63 @@ DWORD WINAPI InitilizeTargets(LPVOID lpParam) {
     t1.setImage(imageList[3 - 3]);
     targets.push_back(t1);
     ReleaseMutex(g_mutex);
+    return 0;
+}
+
+DWORD WINAPI GetData(LPVOID lpParam) {
+    int port = 8888;
+    string ipAddressStr = "127.0.0.1";
+    WSADATA data;
+    WORD version = MAKEWORD(2, 2);
+    if (WSAStartup(version, &data) != 0) {
+        throw 1;
+    }
+    sockaddr_in localEndPoint;
+    localEndPoint.sin_family = AF_INET;
+    localEndPoint.sin_port = htons(port);
+    inet_pton(AF_INET, ipAddressStr.c_str(), &localEndPoint.sin_addr);
+    SOCKET listener = socket(AF_INET, SOCK_STREAM, 0);
+    if (listener == INVALID_SOCKET) {
+        WSACleanup();
+        throw 1;
+    }
+    if (connect(listener, (sockaddr*)&localEndPoint, sizeof(localEndPoint)) == SOCKET_ERROR) {
+        closesocket(listener);
+        WSACleanup();
+        throw 1;
+    }
+    char buffer[4];
+    int i = 1;
+    float f_y;
+    float f_x;
+    while (true) {
+        while (isplaying) {
+            int g = recv(listener, buffer, 4, 0);
+            if (g != 0) {
+                if (i == 2) f_y = *((float*)(buffer)); else if (i == 1) f_x = *((float*)(buffer));
+                if (i != 3) {
+                    i++;
+                }
+                else if (i == 3) {
+                    points.push(Point(f_x, f_y));
+                    i == 1;
+                }
+            }
+        }
+    }
+    closesocket(listener);
+    WSACleanup();
+    return 0;
+}
+
+DWORD WINAPI RefreshPosition(LPVOID lpParam) {
+    while (isplaying) {
+        if (points.size() > 0) {
+            Point p = points.front();
+            points.pop();
+            scope.move_by_angles(p.X,p.Y);
+        }
+    }
     return 0;
 }
 
@@ -254,7 +327,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
     }
     case WM_KEYDOWN:
     {
-        scope.move(wParam);
+        scope.move_by_keys(wParam);
         break;
     }
     case WM_PAINT:

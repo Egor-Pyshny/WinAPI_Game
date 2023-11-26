@@ -39,7 +39,17 @@ void Scope::move_left()
     if (this->x < 0) this->x = 0;
 }
 
-bool Scope::move(WPARAM wparam) {
+void Scope::move_by_angles(float x, float y)
+{
+    this->x += step * (x / max);
+    this->y += step * (y / max);
+    if (this->y < 0) this->y = 0;
+    if (this->y > 575) this->y = 575;
+    if (this->x > 575) this->x = 575;
+    if (this->x < 0) this->x = 0;
+}
+
+bool Scope::move_by_keys(WPARAM wparam) {
     switch (wparam) {
     case VK_LEFT:
     {
