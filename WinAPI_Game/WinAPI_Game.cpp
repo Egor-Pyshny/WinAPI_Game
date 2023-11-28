@@ -149,9 +149,6 @@ DWORD WINAPI GetData(LPVOID lpParam) {
         WSACleanup();
         throw 1;
     }
-    char tmp;
-    recv(listener, &tmp, 1, 0);
-    send(listener, &tmp, 1, 0);
     char buffer[4];
     int i = 1;
     float f_y;
