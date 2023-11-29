@@ -17,6 +17,17 @@
 #define IDB_PNG3                        131
 #define IDB_PNG4                        132
 #define IDC_STATIC                      -1
+#define IDC_XSTARTCALIBRATING_BUTTON  15
+#define IDC_YSTARTCALIBRATING_BUTTON  16
+#define IDC_XSTOPCALIBRATING_BUTTON  17
+#define IDC_YSTOPCALIBRATING_BUTTON  18
+#define IDC_RESOLUTION_DROPLIST 19
+#define IDC_XCALIBRATING_TEXTBOX 20
+#define IDC_YCALIBRATING_TEXTBOX 21
+#define IDC_CALIBRATECENTER_BUTTON 22
+#define IDC_STARTGAME_BUTTON 23
+#define IDC_FPSTIMER_ID 24
+#define IDC_DRAWTIMER_ID 25
 
 // Next default values for new objects
 // 

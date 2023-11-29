@@ -8,9 +8,9 @@ public:
 	void reset();
 	int getX();
 	int getY();
-private:
 	int x = 0;
 	int y = 0;
+private:
 	const int step = 10;
 	const int max = 17;
 	void move_up();
