@@ -20,6 +20,7 @@
 #include "Bullet.h"
 #include <windowsx.h>
 #include "Connection.h"
+#include "Converter.h"
 
 using namespace Gdiplus;
 using namespace std;
@@ -45,6 +46,7 @@ HWND hwndXTexbox;
 HWND hwndYTexbox;
 HWND hwndGameWindow;
 HWND hwndSettingsWindow;
+HANDLE hTargetsThread;
 
 HFONT hTextBoxFont;
 bool EnableStopX = false;
@@ -61,7 +63,6 @@ HDC hdcBuffer = NULL;
 HBITMAP hBitmap = NULL;
 HBITMAP hOldBitmap = NULL;
 Bitmap* scope_png = NULL;
-HANDLE g_mutex;
 vector<target> targets;
 target* current_target = NULL;
 queue<Point> points;
@@ -82,15 +83,11 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
     ULONG_PTR gdiplusToken;
     GdiplusStartup(&gdiplusToken, &gdiplusStartupInput, NULL);
     InitializePhotos();
-    HANDLE hThread = CreateThread(nullptr, 0, InitilizeTargets, NULL, 0, nullptr);
-    if (hThread == NULL) {
+    hTargetsThread = CreateThread(nullptr, 0, InitilizeTargets, NULL, 0, nullptr);
+    if (hTargetsThread == NULL) {
         return 1;
     }
-    g_mutex = CreateMutexW(NULL, FALSE, NULL);
-    if (g_mutex == NULL) {
-        CloseHandle(hThread);
-        return 1;
-    }
+
     WNDCLASS wc_settings = { };
     wc_settings.lpfnWndProc = Settings_WindowProc;
     wc_settings.hInstance = hInstance;
@@ -103,7 +100,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
         L"Settings",
         L"Settings",
         WS_OVERLAPPEDWINDOW & ~WS_SIZEBOX,
-        CW_USEDEFAULT, CW_USEDEFAULT, 416, 439,
+        CW_USEDEFAULT, CW_USEDEFAULT, 0, 0,
         NULL,
         NULL,
         hInstance,
@@ -113,7 +110,18 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
     {
         return 1;
     }
+    RECT newClientRect = { 0, 0, 400, 400 };
+    AdjustWindowRect(&newClientRect, WS_OVERLAPPEDWINDOW, FALSE);
+    SetWindowPos(
+        hwndSettingsWindow,
+        NULL,
+        0, 0,
+        newClientRect.right - newClientRect.left,
+        newClientRect.bottom - newClientRect.top,
+        SWP_NOMOVE | SWP_NOZORDER
+    );
 
+    
     WNDCLASS wc_game = { };
     wc_game.lpfnWndProc = Game_WindowProc;
     wc_game.hInstance = hInstance;
@@ -126,7 +134,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
         L"Game",
         L"Game",
         WS_OVERLAPPEDWINDOW & ~WS_SIZEBOX,
-        CW_USEDEFAULT, CW_USEDEFAULT, WINDOW_WIDTH+16, WINDOW_HEIGHT+39,
+        CW_USEDEFAULT, CW_USEDEFAULT, 0, 0,
         NULL,       
         NULL,       
         hInstance,  
@@ -136,7 +144,16 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
     {
         return 1;
     }
-    WaitForSingleObject(g_mutex, INFINITE);
+    newClientRect = { 0, 0, WINDOW_WIDTH, WINDOW_HEIGHT };
+    AdjustWindowRect(&newClientRect, WS_OVERLAPPEDWINDOW, FALSE);
+    SetWindowPos(
+        hwndGameWindow,
+        NULL,
+        0, 0,
+        newClientRect.right - newClientRect.left,
+        newClientRect.bottom - newClientRect.top,
+        SWP_NOMOVE | SWP_NOZORDER
+    );
     if (!DrawComponents(hwndSettingsWindow, hInstance)) {
         return 1;
     }
@@ -155,11 +172,8 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
         TranslateMessage(&msg);
         DispatchMessage(&msg);
     }
-
     GdiplusShutdown(gdiplusToken);
-    CloseHandle(hThread);
     //CloseHandle(data_thread);
-    CloseHandle(g_mutex);
     return (int)msg.wParam;
 }
 
@@ -167,7 +181,6 @@ DWORD WINAPI InitilizeTargets(LPVOID lpParam) {
     target t1(3, 150, 150, 2);
     t1.setImage(imageList[3 - 3]);
     targets.push_back(t1);
-    ReleaseMutex(g_mutex);
     return 0;
 }
 
@@ -316,6 +329,7 @@ void DoubleBuff(HWND hwnd) {
 
 LRESULT CALLBACK Game_WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
+    Converter converter(600, 600, 20.0f, 20.0f);
     switch (uMsg)
     {
     case WM_DESTROY:
@@ -384,7 +398,7 @@ LRESULT CALLBACK Game_WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPa
             POINTFLOAT nextPoint;
             POINT newCenter;
             nextPoint = currentAngles;
-            //newCenter = converter.ToCoord(nextPoint);
+            newCenter = converter.ToCoord(nextPoint);
             scope_x = scope.getX();
             scope_y = scope.getY();
             if (isplaying) {
@@ -530,7 +544,6 @@ LRESULT CALLBACK Settings_WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM
     case WM_CREATE:
     {
         hTextBoxFont = CreateFontW(39, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET, OUT_TT_PRECIS, CLIP_DEFAULT_PRECIS, ANTIALIASED_QUALITY, FF_DONTCARE | DEFAULT_PITCH, L"Arial");
-
         break;
     }
     case WM_CTLCOLORSTATIC:
@@ -625,8 +638,12 @@ LRESULT CALLBACK Settings_WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM
             ShowWindow(hwndSettingsWindow, SW_HIDE);
             SetTimer(hwndGameWindow, IDC_FPSTIMER_ID, 1000 / FPS_LIMIT, NULL);
             SetTimer(hwndGameWindow, IDC_DRAWTIMER_ID, 0, NULL);
+            if (hTargetsThread != NULL) {
+                WaitForSingleObject(hTargetsThread, INFINITE);
+                CloseHandle(hTargetsThread);
+                hTargetsThread = NULL;
+            }
             ShowWindow(hwndGameWindow, SW_SHOWDEFAULT);
-
             int selectedIndex = SendMessage(hComboBox, CB_GETCURSEL, 0, 0);
             break;
         }
