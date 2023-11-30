@@ -163,10 +163,6 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
     /*HANDLE data_thread = CreateThread(nullptr, 0, GetData, NULL, 0, nullptr);
     if (data_thread == NULL) {
         return 1;
-    }
-    HANDLE refresh_thread = CreateThread(nullptr, 0, RefreshPosition, NULL, 0, nullptr);
-    if (refresh_thread == NULL) {
-        return 1;
     }*/
     while (GetMessage(&msg, NULL, 0, 0)) {
         TranslateMessage(&msg);
@@ -399,8 +395,10 @@ LRESULT CALLBACK Game_WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPa
             POINT newCenter;
             nextPoint = currentAngles;
             newCenter = converter.ToCoord(nextPoint);
-            scope_x = scope.getX();
-            scope_y = scope.getY();
+            /*scope_x = scope.getX();
+            scope_y = scope.getY();*/
+            scope_x = newCenter.x;
+            scope_y = newCenter.y;
             if (isplaying) {
                 //Shoot();
                 CalculateScore();
