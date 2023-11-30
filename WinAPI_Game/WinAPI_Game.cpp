@@ -1,15 +1,11 @@
 ﻿#ifndef UNICODE
 #define UNICODE
 #endif 
+#define _USE_MATH_DEFINES
 
 #pragma comment(lib, "ws2_32.lib")
 #include <WS2tcpip.h>
-//#include <iostream>
-//#include <stdio.h>
-//#include <wchar.h>
-//#include <commctrl.h>
 #include <Windows.h>
-//#include <winuser.h>
 #include <string>
 #include <gdiplus.h>
 #include <vector>
@@ -19,6 +15,7 @@
 #include <queue>
 #include "Bullet.h"
 #include <windowsx.h>
+#include <cmath>
 #include "Connection.h"
 #include "Converter.h"
 
@@ -39,7 +36,8 @@ HWND hwndButtonStartCalibratingX;
 HWND hwndButtonStopCalibratingX;
 HWND hwndButtonStartCalibratingY;
 HWND hwndButtonStopCalibratingY;
-HWND hwndButtonCalibrateCenter;
+HWND hwndButtonStartCalibratingCenter;
+HWND hwndButtonStopCalibratingCenter;
 HWND hwndButtonStartGame;
 HWND hComboBox;
 HWND hwndXTexbox;
@@ -51,6 +49,7 @@ HANDLE hTargetsThread;
 HFONT hTextBoxFont;
 bool EnableStopX = false;
 bool EnableStopY = false;
+bool EnableStopCenter = false;
 bool XCalibrated = false;
 bool YCalibrated = false;
 bool CenterCalibrated = false;
@@ -66,6 +65,7 @@ Bitmap* scope_png = NULL;
 vector<target> targets;
 target* current_target = NULL;
 queue<Point> points;
+POINTFLOAT currentAngles;
 const int WINDOW_WIDTH = 900;
 const int WINDOW_HEIGHT = 600;
 const int FPS_LIMIT = 50;
@@ -75,7 +75,12 @@ int score = 0;
 int current_target_number = -1;
 int bullet_number = 0;
 bool isplaying = false;
-POINTFLOAT currentAngles;
+float maxXAngle = 0;
+float maxYAngle = 0;
+float minXAngle = 0;
+float minYAngle = 0;
+float centerXAngle = 0;
+float centerYAngle = 0;
 
 int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine, int nCmdShow)
 {
@@ -160,21 +165,21 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
     ShowWindow(hwndSettingsWindow, nCmdShow);
     UpdateWindow(hwndSettingsWindow);
     MSG msg;
-    /*HANDLE data_thread = CreateThread(nullptr, 0, GetData, NULL, 0, nullptr);
+    HANDLE data_thread = CreateThread(nullptr, 0, GetData, NULL, 0, nullptr);
     if (data_thread == NULL) {
         return 1;
-    }*/
+    }
     while (GetMessage(&msg, NULL, 0, 0)) {
         TranslateMessage(&msg);
         DispatchMessage(&msg);
     }
     GdiplusShutdown(gdiplusToken);
-    //CloseHandle(data_thread);
+    CloseHandle(data_thread);
     return (int)msg.wParam;
 }
 
 DWORD WINAPI InitilizeTargets(LPVOID lpParam) {
-    target t1(3, 150, 150, 2);
+    target t1(3, 150, 150, 600);
     t1.setImage(imageList[3 - 3]);
     targets.push_back(t1);
     return 0;
@@ -182,20 +187,36 @@ DWORD WINAPI InitilizeTargets(LPVOID lpParam) {
 
 DWORD WINAPI GetData(LPVOID lpParam) {
     int port = 8888;
-    const char* ipAddressStr = "127.0.0.1";
+    const char* ipAddressStr = "192.168.150.2";
     POINTFLOAT radianPoint;
-    
-    Connection network(ipAddressStr,8888);
+    Connection network(ipAddressStr,9998);
     network.Connect();
-
     while (true)
     {
         if (network.NextXY(radianPoint))
         {
-            currentAngles = { radianPoint.x * 180/3.14f, radianPoint.y * 180 / 3.14f};
-            if (isplaying) {
-                scope.x += currentAngles.x;
-                scope.y += currentAngles.y;
+            currentAngles = { radianPoint.x * 180/(float)M_PI , radianPoint.y * 180 / (float)M_PI };
+            if (CenterCalibrated) {
+                currentAngles.x -= centerXAngle;
+                currentAngles.y -= centerYAngle;
+            }
+            /*if (isplaying) {
+                scope_x -= currentAngles.x;
+                scope_y -= currentAngles.y;
+            }*/
+            if (EnableStopX) {
+                minXAngle = currentAngles.x;
+                std::wstring floatString = std::to_wstring(minXAngle);
+                SetWindowText(hwndXTexbox, floatString.c_str());
+            } 
+            if (EnableStopY) {
+                minYAngle = currentAngles.y;
+                std::wstring floatString = std::to_wstring(minYAngle);
+                SetWindowText(hwndYTexbox, floatString.c_str());
+            } 
+            if (EnableStopCenter) {
+                centerYAngle = currentAngles.y;
+                centerXAngle = currentAngles.x;
             }
         }
     }
@@ -245,7 +266,7 @@ void DrawScope(HDC hdc) {
     Graphics graphics(hdc); 
     UINT width = scope_png->GetWidth();
     UINT height = scope_png->GetHeight();
-    graphics.DrawImage(scope_png, scope_x, scope_y, width, height);
+    graphics.DrawImage(scope_png, scope.getX(), scope.getY(), width, height);
 }
 
 void DrawTarget(HDC hdc) {
@@ -395,10 +416,7 @@ LRESULT CALLBACK Game_WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPa
             POINT newCenter;
             nextPoint = currentAngles;
             newCenter = converter.ToCoord(nextPoint);
-            /*scope_x = scope.getX();
-            scope_y = scope.getY();*/
-            scope_x = newCenter.x;
-            scope_y = newCenter.y;
+            scope.move_by_angles(currentAngles);    
             if (isplaying) {
                 //Shoot();
                 CalculateScore();
@@ -506,22 +524,32 @@ int DrawComponents(HWND hwnd, HINSTANCE hInstance) {
         NULL
     );
 
-    hwndButtonCalibrateCenter = CreateWindow(
+    hwndButtonStartCalibratingCenter = CreateWindow(
         L"BUTTON",
-        L"Calibrate center",
+        L"Start calibrating center",
         WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON | BS_MULTILINE,
-        100, 300, 200, 30,
+        100, 300, 95, 50,
         hwnd,
-        (HMENU)IDC_CALIBRATECENTER_BUTTON,
+        (HMENU)IDC_STARTCALIBRATINGCENTER_BUTTON,
         hInstance,
         NULL
     );
-    EnableWindow(hwndButtonCalibrateCenter, FALSE);
+    hwndButtonStopCalibratingCenter = CreateWindow(
+        L"BUTTON",
+        L"Stop calibrating center",
+        WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON | BS_MULTILINE,
+        205, 300, 95, 50,
+        hwnd,
+        (HMENU)IDC_STOPCALIBRATINGCENTER_BUTTON,
+        hInstance,
+        NULL
+    );
+    EnableWindow(hwndButtonStopCalibratingCenter, FALSE);
     hwndButtonStartGame = CreateWindow(
         L"BUTTON",
         L"Start game",
         WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON | BS_MULTILINE,
-        100, 340, 200, 30,
+        100, 360, 200, 30,
         hwnd,
         (HMENU)IDC_STARTGAME_BUTTON,
         hInstance,
@@ -536,9 +564,10 @@ LRESULT CALLBACK Settings_WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM
     switch (uMsg)
     {
     case WM_DESTROY:
-
+    {   
+        PostQuitMessage(0);
         return 0;
-
+    }
     case WM_CREATE:
     {
         hTextBoxFont = CreateFontW(39, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET, OUT_TT_PRECIS, CLIP_DEFAULT_PRECIS, ANTIALIASED_QUALITY, FF_DONTCARE | DEFAULT_PITCH, L"Arial");
@@ -562,14 +591,6 @@ LRESULT CALLBACK Settings_WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM
     }
     case WM_PAINT:
     {
-        if (EnableStopX) {
-            std::wstring floatString = std::to_wstring(currentAngles.x);
-            SetWindowText(hwndXTexbox, floatString.c_str());
-        }
-        if (EnableStopY) {
-            std::wstring floatString = std::to_wstring(currentAngles.y);
-            SetWindowText(hwndYTexbox, floatString.c_str());
-        }
         break;
     }
     case WM_COMMAND:
@@ -577,22 +598,18 @@ LRESULT CALLBACK Settings_WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM
         switch (LOWORD(wParam))
         {
         case IDC_XSTARTCALIBRATING_BUTTON:
-        {
+        {  
             EnableWindow(hwndButtonStartGame, FALSE);
-            EnableWindow(hwndButtonCalibrateCenter, FALSE);
             EnableStopX = true;
             XCalibrated = false;
-            CenterCalibrated = false;
             EnableWindow(hwndButtonStopCalibratingX, TRUE);
             break;
         }
         case IDC_YSTARTCALIBRATING_BUTTON:
         {
             EnableWindow(hwndButtonStartGame, FALSE);
-            EnableWindow(hwndButtonCalibrateCenter, FALSE);
             EnableStopY = true;
             YCalibrated = false;
-            CenterCalibrated = false;
             EnableWindow(hwndButtonStopCalibratingY, TRUE);
             break;
         }
@@ -601,11 +618,8 @@ LRESULT CALLBACK Settings_WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM
             EnableStopX = false;
             XCalibrated = true;
             EnableWindow(hwndButtonStopCalibratingX, FALSE);
-            if (XCalibrated && YCalibrated) {
-                if (CenterCalibrated)
-                    EnableWindow(hwndButtonStartGame, TRUE);
-                else
-                    EnableWindow(hwndButtonCalibrateCenter, TRUE);
+            if (XCalibrated && YCalibrated && CenterCalibrated) {
+                EnableWindow(hwndButtonStartGame, TRUE);
             }
             break;
         }
@@ -614,17 +628,22 @@ LRESULT CALLBACK Settings_WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM
             EnableStopY = false;
             YCalibrated = true;
             EnableWindow(hwndButtonStopCalibratingY, FALSE);
-            if (XCalibrated && YCalibrated) {
-                if (CenterCalibrated)
-                    EnableWindow(hwndButtonStartGame, TRUE);
-                else
-                    EnableWindow(hwndButtonCalibrateCenter, TRUE);
+            if (XCalibrated && YCalibrated && CenterCalibrated) {
+                EnableWindow(hwndButtonStartGame, TRUE);
             }
             break;
         }
-        case IDC_CALIBRATECENTER_BUTTON:
+        case IDC_STARTCALIBRATINGCENTER_BUTTON:
+        {
+            EnableStopCenter = true;
+            EnableWindow(hwndButtonStopCalibratingCenter, TRUE);
+            break;
+        }
+        case IDC_STOPCALIBRATINGCENTER_BUTTON:
         {
             CenterCalibrated = true;
+            EnableStopCenter = false;
+            EnableWindow(hwndButtonStopCalibratingCenter, FALSE);
             if (XCalibrated && YCalibrated && CenterCalibrated) {
                 EnableWindow(hwndButtonStartGame, TRUE);
             }
@@ -641,6 +660,12 @@ LRESULT CALLBACK Settings_WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM
                 CloseHandle(hTargetsThread);
                 hTargetsThread = NULL;
             }
+            scope.setMaxXAngle(minXAngle);
+            scope.setMaxYAngle(minYAngle);
+            scope.setMinXAngle(minXAngle);
+            scope.setMinYAngle(minYAngle);
+            scope.setCenterXAngle(centerXAngle);
+            scope.setCenterYAngle(centerYAngle);
             ShowWindow(hwndGameWindow, SW_SHOWDEFAULT);
             int selectedIndex = SendMessage(hComboBox, CB_GETCURSEL, 0, 0);
             break;

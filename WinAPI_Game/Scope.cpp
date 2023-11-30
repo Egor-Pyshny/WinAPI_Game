@@ -15,6 +15,36 @@ int Scope::getY()
     return this->y;
 }
 
+void Scope::setMaxXAngle(float maxXAngle)
+{
+    this->maxXAngle = maxXAngle;
+}
+
+void Scope::setMaxYAngle(float maxYAngle)
+{
+    this->maxYAngle = maxYAngle;
+}
+
+void Scope::setMinXAngle(float minXAngle)
+{
+    this->minXAngle = minXAngle;
+}
+
+void Scope::setMinYAngle(float minYAngle)
+{
+    this->minYAngle = minYAngle;
+}
+
+void Scope::setCenterXAngle(float centerXAngle)
+{
+    this->centerXAngle = centerXAngle;
+}
+
+void Scope::setCenterYAngle(float centerYAngle)
+{
+    this->centerYAngle = centerYAngle;
+}
+
 void Scope::move_up()
 {
     this->y -= step;
@@ -47,6 +77,18 @@ void Scope::move_by_angles(float x, float y)
     if (this->y > 575) this->y = 575;
     if (this->x > 575) this->x = 575;
     if (this->x < 0) this->x = 0;
+}
+
+void Scope::move_by_angles(POINTFLOAT p)
+{
+    float delta_x = 0-p.x;
+    float delta_y = 0-p.y;
+    if (abs(delta_x) > fault && abs(delta_x) > fault) {
+        float scaling_coef_x = p.x > 0 ? p.x / this->maxXAngle : p.x / this->minXAngle;
+        float scaling_coef_y = p.y > 0 ? p.y / this->maxYAngle : p.y / this->minYAngle;
+        this->x -= step * scaling_coef_x;
+        this->y -= step * scaling_coef_y;
+    }
 }
 
 bool Scope::move_by_keys(WPARAM wparam) {
