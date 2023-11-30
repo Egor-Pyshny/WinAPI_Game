@@ -84,10 +84,14 @@ void Scope::move_by_angles(POINTFLOAT p)
     float delta_x = 0-p.x;
     float delta_y = 0-p.y;
     if (abs(delta_x) > fault && abs(delta_x) > fault) {
-        float scaling_coef_x = p.x > 0 ? p.x / this->maxXAngle : p.x / this->minXAngle;
-        float scaling_coef_y = p.y > 0 ? p.y / this->maxYAngle : p.y / this->minYAngle;
-        this->x -= step * scaling_coef_x;
-        this->y -= step * scaling_coef_y;
+        float scaling_coef_x = p.x > 0 ? p.x / abs(this->maxXAngle) : p.x / abs(this->minXAngle);
+        float scaling_coef_y = p.y > 0 ? p.y / abs(this->maxYAngle) : p.y / abs(this->minYAngle);
+        this->x += step * scaling_coef_x;
+        this->y += step * scaling_coef_y;
+        if (this->y < 0) this->y = 0;
+        if (this->y > 575) this->y = 575;
+        if (this->x > 575) this->x = 575;
+        if (this->x < 0) this->x = 0;
     }
 }
 

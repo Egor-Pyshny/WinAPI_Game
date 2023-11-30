@@ -45,7 +45,6 @@ HWND hwndYTexbox;
 HWND hwndGameWindow;
 HWND hwndSettingsWindow;
 HANDLE hTargetsThread;
-
 HFONT hTextBoxFont;
 bool EnableStopX = false;
 bool EnableStopY = false;
@@ -53,7 +52,6 @@ bool EnableStopCenter = false;
 bool XCalibrated = false;
 bool YCalibrated = false;
 bool CenterCalibrated = false;
-
 Bitmap* imageList[target::types];
 const int max_bullets_to_draw = 50;
 Bullet bullets[max_bullets_to_draw];
@@ -555,7 +553,6 @@ int DrawComponents(HWND hwnd, HINSTANCE hInstance) {
         hInstance,
         NULL
     );
-    EnableWindow(hwndButtonStartGame, FALSE);
     return 1;
 }
 
@@ -599,7 +596,6 @@ LRESULT CALLBACK Settings_WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM
         {
         case IDC_XSTARTCALIBRATING_BUTTON:
         {  
-            EnableWindow(hwndButtonStartGame, FALSE);
             EnableStopX = true;
             XCalibrated = false;
             EnableWindow(hwndButtonStopCalibratingX, TRUE);
@@ -607,7 +603,6 @@ LRESULT CALLBACK Settings_WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM
         }
         case IDC_YSTARTCALIBRATING_BUTTON:
         {
-            EnableWindow(hwndButtonStartGame, FALSE);
             EnableStopY = true;
             YCalibrated = false;
             EnableWindow(hwndButtonStopCalibratingY, TRUE);
@@ -618,9 +613,6 @@ LRESULT CALLBACK Settings_WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM
             EnableStopX = false;
             XCalibrated = true;
             EnableWindow(hwndButtonStopCalibratingX, FALSE);
-            if (XCalibrated && YCalibrated && CenterCalibrated) {
-                EnableWindow(hwndButtonStartGame, TRUE);
-            }
             break;
         }
         case IDC_YSTOPCALIBRATING_BUTTON:
@@ -628,9 +620,6 @@ LRESULT CALLBACK Settings_WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM
             EnableStopY = false;
             YCalibrated = true;
             EnableWindow(hwndButtonStopCalibratingY, FALSE);
-            if (XCalibrated && YCalibrated && CenterCalibrated) {
-                EnableWindow(hwndButtonStartGame, TRUE);
-            }
             break;
         }
         case IDC_STARTCALIBRATINGCENTER_BUTTON:
@@ -644,30 +633,32 @@ LRESULT CALLBACK Settings_WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM
             CenterCalibrated = true;
             EnableStopCenter = false;
             EnableWindow(hwndButtonStopCalibratingCenter, FALSE);
-            if (XCalibrated && YCalibrated && CenterCalibrated) {
-                EnableWindow(hwndButtonStartGame, TRUE);
-            }
             break;
         }
         case IDC_STARTGAME_BUTTON:
         {
-            isplaying = true;
-            ShowWindow(hwndSettingsWindow, SW_HIDE);
-            SetTimer(hwndGameWindow, IDC_FPSTIMER_ID, 1000 / FPS_LIMIT, NULL);
-            SetTimer(hwndGameWindow, IDC_DRAWTIMER_ID, 0, NULL);
-            if (hTargetsThread != NULL) {
-                WaitForSingleObject(hTargetsThread, INFINITE);
-                CloseHandle(hTargetsThread);
-                hTargetsThread = NULL;
+            if (XCalibrated && YCalibrated && CenterCalibrated) {
+                isplaying = true;
+                ShowWindow(hwndSettingsWindow, SW_HIDE);
+                SetTimer(hwndGameWindow, IDC_FPSTIMER_ID, 1000 / FPS_LIMIT, NULL);
+                SetTimer(hwndGameWindow, IDC_DRAWTIMER_ID, 0, NULL);
+                if (hTargetsThread != NULL) {
+                    WaitForSingleObject(hTargetsThread, INFINITE);
+                    CloseHandle(hTargetsThread);
+                    hTargetsThread = NULL;
+                }
+                scope.setMaxXAngle(minXAngle);
+                scope.setMaxYAngle(minYAngle);
+                scope.setMinXAngle(minXAngle);
+                scope.setMinYAngle(minYAngle);
+                scope.setCenterXAngle(centerXAngle);
+                scope.setCenterYAngle(centerYAngle);
+                ShowWindow(hwndGameWindow, SW_SHOWDEFAULT);
+                int selectedIndex = SendMessage(hComboBox, CB_GETCURSEL, 0, 0);
             }
-            scope.setMaxXAngle(minXAngle);
-            scope.setMaxYAngle(minYAngle);
-            scope.setMinXAngle(minXAngle);
-            scope.setMinYAngle(minYAngle);
-            scope.setCenterXAngle(centerXAngle);
-            scope.setCenterYAngle(centerYAngle);
-            ShowWindow(hwndGameWindow, SW_SHOWDEFAULT);
-            int selectedIndex = SendMessage(hComboBox, CB_GETCURSEL, 0, 0);
+            else {
+                MessageBox(hwndSettingsWindow, L"First callbrate X, Y, Center", L"Error", MB_ICONWARNING | MB_OK);
+            }
             break;
         }
         }
