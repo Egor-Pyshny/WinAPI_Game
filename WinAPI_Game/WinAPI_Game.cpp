@@ -29,6 +29,8 @@ void InitializePhotos();
 DWORD WINAPI InitilizeTargets(LPVOID lpParam);
 DWORD WINAPI GetData(LPVOID lpParam);
 
+vector<int> v;
+
 HWND hLabelX;
 HWND hLabelY;
 HWND hLabelSreen;
@@ -53,7 +55,7 @@ bool XCalibrated = false;
 bool YCalibrated = false;
 bool CenterCalibrated = false;
 Bitmap* imageList[target::types];
-const int max_bullets_to_draw = 50;
+const int max_bullets_to_draw = 30;
 Bullet bullets[max_bullets_to_draw];
 Scope scope;
 HDC hdcBuffer = NULL;
@@ -64,11 +66,10 @@ vector<target> targets;
 target* current_target = NULL;
 queue<Point> points;
 POINTFLOAT currentAngles;
-const int WINDOW_WIDTH = 900;
-const int WINDOW_HEIGHT = 600;
+const wchar_t* resolutions[] = IDC_RESOLUTIONLIST;
+int WINDOW_WIDTH;
+int WINDOW_HEIGHT;
 const int FPS_LIMIT = 50;
-int scope_x;
-int scope_y;
 int score = 0;
 int current_target_number = -1;
 int bullet_number = 0;
@@ -79,6 +80,7 @@ float minXAngle = 0;
 float minYAngle = 0;
 float centerXAngle = 0;
 float centerYAngle = 0;
+int fps = 0;
 
 int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine, int nCmdShow)
 {
@@ -147,16 +149,6 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
     {
         return 1;
     }
-    newClientRect = { 0, 0, WINDOW_WIDTH, WINDOW_HEIGHT };
-    AdjustWindowRect(&newClientRect, WS_OVERLAPPEDWINDOW, FALSE);
-    SetWindowPos(
-        hwndGameWindow,
-        NULL,
-        0, 0,
-        newClientRect.right - newClientRect.left,
-        newClientRect.bottom - newClientRect.top,
-        SWP_NOMOVE | SWP_NOZORDER
-    );
     if (!DrawComponents(hwndSettingsWindow, hInstance)) {
         return 1;
     }
@@ -224,8 +216,6 @@ DWORD WINAPI GetData(LPVOID lpParam) {
 void RestartGame(HWND hwnd) {
     isplaying = true;
     scope.reset();
-    scope_x = scope.getX();
-    scope_y = scope.getY();
     score = 0;
     current_target_number = -1;
     bullet_number = 0;
@@ -254,7 +244,7 @@ void InitializePhotos() {
 }
 
 void DrawDivider(HDC hdc) {
-    RECT rect = { 600, 0, 602, 600 };
+    RECT rect = { WINDOW_WIDTH - 300, 0, WINDOW_WIDTH - 298, WINDOW_HEIGHT };
     HBRUSH hBrush = CreateSolidBrush(RGB(0, 0, 0));
     FillRect(hdc, &rect, hBrush);
     DeleteObject(hBrush);
@@ -285,24 +275,25 @@ void DrawBullets(HDC hdc) {
 }
 
 void DrawScoreText(HDC hdc) {
-    RECT text_rect = { 600,20,900,70 };
+    RECT text_rect = { WINDOW_WIDTH - 300,20,WINDOW_WIDTH,70 };
     string temp = "Score: ";
-    temp += to_string(score);
+    temp += to_string(fps);
     temp += "\0\0";
     wstring text(temp.begin(), temp.end());
     DrawTextW(hdc, text.c_str(), -1, &text_rect, DT_CENTER);
 }
 
 void DrawRestartButton(HDC hdc) {
+    //рисование кнопки относительно рабочей области а не по координатам через GetClientRect
     SetBkMode(hdc, TRANSPARENT);
-    RECT restart_game = { 622,550,880,580 };
-    RECT restart_game_text = { 620,555,880,580 };
+    RECT restart_game = { WINDOW_WIDTH - 278,500,WINDOW_WIDTH - 20,560 };
+    //RECT restart_game_text = { 620,555,880,580 };
     HBRUSH hBrush = CreateSolidBrush(RGB(181, 181, 181));
     FillRect(hdc, &restart_game, hBrush);
     DeleteObject(hBrush);
     const WCHAR text[] = L"Restart";
     int textSize = ARRAYSIZE(text);
-    DrawTextW(hdc, text, textSize, &restart_game_text, DT_CENTER | DT_VCENTER);
+    //DrawTextW(hdc, text, textSize, &restart_game_text, DT_CENTER | DT_VCENTER);
 }
 
 void SwitchTarget() {
@@ -350,13 +341,12 @@ LRESULT CALLBACK Game_WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPa
     case WM_DESTROY:
         PostQuitMessage(0);
         KillTimer(hwnd, IDC_FPSTIMER_ID);
+        KillTimer(hwnd, IDC_DRAWTIMER_ID);
+        KillTimer(hwnd, 5);
         return 0;
 
     case WM_CREATE:
     {
-        scope.reset();
-        scope_x = scope.getX();
-        scope_y = scope.getY();
         break;
     }
     case WM_MOUSEMOVE: 
@@ -370,6 +360,7 @@ LRESULT CALLBACK Game_WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPa
     }
     case WM_PAINT:
     {
+        fps++;
         PAINTSTRUCT ps;
         HDC hdc = BeginPaint(hwnd, &ps);
         FillBackground(hwnd, hdcBuffer);
@@ -420,8 +411,14 @@ LRESULT CALLBACK Game_WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPa
                 CalculateScore();
             }
             DoubleBuff(hwnd);
+            //fps++;
             InvalidateRect(hwnd, NULL, TRUE);
             break;
+        }
+        case 5:
+        {
+            v.push_back(fps);
+            fps = 0;
         }
         case IDC_DRAWTIMER_ID:
         {
@@ -514,13 +511,16 @@ int DrawComponents(HWND hwnd, HINSTANCE hInstance) {
         0,
         L"ComboBox",
         NULL,
-        CBS_DROPDOWNLIST | WS_CHILD | WS_VISIBLE,
-        100, 270, 200, 20,
+        CBS_DROPDOWN | WS_VSCROLL | WS_CHILD | WS_OVERLAPPED | WS_VISIBLE,
+        100, 270, 200, 90,
         hwnd,
         (HMENU)IDC_RESOLUTION_DROPLIST,
         hInstance,
         NULL
     );
+    for (const wchar_t* resolution : resolutions) {
+        SendMessage(hComboBox, CB_ADDSTRING, 0, (LPARAM)resolution);
+    }
 
     hwndButtonStartCalibratingCenter = CreateWindow(
         L"BUTTON",
@@ -554,6 +554,31 @@ int DrawComponents(HWND hwnd, HINSTANCE hInstance) {
         NULL
     );
     return 1;
+}
+
+void SetResolution(const wchar_t* resolution) {
+    wstring wstr(resolution);
+    int pos = wstr.find(L"x");
+    if (pos != -1) {
+        wstring width = wstr.substr(0, pos);
+        wstring height = wstr.substr(pos + 1);
+        WINDOW_WIDTH = stoi(width);
+        WINDOW_HEIGHT = stoi(height);
+    }
+    else {
+        RECT workArea;
+        SystemParametersInfo(SPI_GETWORKAREA, 0, &workArea, 0);
+        WINDOW_WIDTH = workArea.right - workArea.left;
+        WINDOW_HEIGHT = workArea.bottom - workArea.top;
+    }
+    SetWindowPos(
+        hwndGameWindow,
+        NULL,
+        0, 0,
+        WINDOW_WIDTH,
+        WINDOW_HEIGHT,
+        SWP_NOMOVE | SWP_NOZORDER
+    );
 }
 
 LRESULT CALLBACK Settings_WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
@@ -637,11 +662,13 @@ LRESULT CALLBACK Settings_WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM
         }
         case IDC_STARTGAME_BUTTON:
         {
-            if (XCalibrated && YCalibrated && CenterCalibrated) {
+            int selectedIndex = SendMessage(hComboBox, CB_GETCURSEL, 0, 0);
+            if (XCalibrated && YCalibrated && CenterCalibrated && selectedIndex != -1) {
                 isplaying = true;
                 ShowWindow(hwndSettingsWindow, SW_HIDE);
                 SetTimer(hwndGameWindow, IDC_FPSTIMER_ID, 1000 / FPS_LIMIT, NULL);
                 SetTimer(hwndGameWindow, IDC_DRAWTIMER_ID, 0, NULL);
+                SetTimer(hwndGameWindow, 5, 1000, NULL);
                 if (hTargetsThread != NULL) {
                     WaitForSingleObject(hTargetsThread, INFINITE);
                     CloseHandle(hTargetsThread);
@@ -653,11 +680,16 @@ LRESULT CALLBACK Settings_WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM
                 scope.setMinYAngle(minYAngle);
                 scope.setCenterXAngle(centerXAngle);
                 scope.setCenterYAngle(centerYAngle);
-                ShowWindow(hwndGameWindow, SW_SHOWDEFAULT);
-                int selectedIndex = SendMessage(hComboBox, CB_GETCURSEL, 0, 0);
+                ShowWindow(hwndGameWindow, SW_SHOWDEFAULT);                
+                SetResolution(resolutions[selectedIndex]);
+                RECT clientRect;
+                GetClientRect(hwndGameWindow, &clientRect);
+                scope.setWorkingAreaWidth(WINDOW_WIDTH);
+                scope.setWorkingAreaHeight(clientRect.bottom - clientRect.top);
+                scope.reset();
             }
             else {
-                MessageBox(hwndSettingsWindow, L"First callbrate X, Y, Center", L"Error", MB_ICONWARNING | MB_OK);
+                MessageBox(hwndSettingsWindow, L"First callbrate X, Y, Center, and choose screen resolution", L"Error", MB_ICONWARNING | MB_OK);
             }
             break;
         }

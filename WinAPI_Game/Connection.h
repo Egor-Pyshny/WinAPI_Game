@@ -14,7 +14,6 @@ public:
 	~Connection();
 	bool Connect();
 	bool NextXY(POINTFLOAT& point);
-	static const char* GetIp(HWND hText);
 protected:
 	bool GetCoord(float& coord);
 private:

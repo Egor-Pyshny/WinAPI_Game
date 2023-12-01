@@ -12,14 +12,16 @@ public:
 	void reset();
 	int getX();
 	int getY();
+	void setX(int x);
+	void setY(int y);
+	void setWorkingAreaWidth(int working_area_width);
+	void setWorkingAreaHeight(int working_area_height);
 	void setMaxXAngle(float maxXAngle);
 	void setMaxYAngle(float maxYAngle);
 	void setMinXAngle(float minXAngle);
 	void setMinYAngle(float minYAngle);
 	void setCenterXAngle(float centerXAngle);
 	void setCenterYAngle(float centerYAngle);
-	int x = 0;
-	int y = 0;
 private:
 	const int step = 10;
 	const int max = 17;
@@ -30,7 +32,10 @@ private:
 	float minYAngle = 0;
 	float centerXAngle = 0;
 	float centerYAngle = 0;
-
+	int x = 0;
+	int y = 0;
+	int working_area_width;
+	int working_area_height;
 	void move_up();
 	void move_down();
 	void move_right();
