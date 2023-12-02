@@ -16,6 +16,9 @@
 #include "Bullet.h"
 #include <windowsx.h>
 #include <cmath>
+#include <cwchar>
+#include <iostream>
+#include <random>
 #include "Connection.h"
 #include "Converter.h"
 
@@ -26,14 +29,15 @@ LRESULT CALLBACK Game_WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPa
 LRESULT CALLBACK Settings_WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 int DrawComponents(HWND hwnd, HINSTANCE hInstance);
 void InitializePhotos();
-DWORD WINAPI InitilizeTargets(LPVOID lpParam);
+void PlaceTargetsRandom();
+DWORD WINAPI InitilizeDefaultTargets(LPVOID lpParam);
 DWORD WINAPI GetData(LPVOID lpParam);
 
 vector<int> v;
-
 HWND hLabelX;
 HWND hLabelY;
-HWND hLabelSreen;
+HWND hLabelTargetsAmount;
+HWND hLabelResolution;
 HWND hwndButtonStartCalibratingX;
 HWND hwndButtonStopCalibratingX;
 HWND hwndButtonStartCalibratingY;
@@ -44,19 +48,13 @@ HWND hwndButtonStartGame;
 HWND hComboBox;
 HWND hwndXTexbox;
 HWND hwndYTexbox;
+HWND hwndTargetsAmountTexbox;
 HWND hwndGameWindow;
 HWND hwndSettingsWindow;
 HANDLE hTargetsThread;
 HFONT hTextBoxFont;
-bool EnableStopX = false;
-bool EnableStopY = false;
-bool EnableStopCenter = false;
-bool XCalibrated = false;
-bool YCalibrated = false;
-bool CenterCalibrated = false;
 Bitmap* imageList[target::types];
-const int max_bullets_to_draw = 30;
-Bullet bullets[max_bullets_to_draw];
+Bullet bullets[MAX_BULLETS];
 Scope scope;
 HDC hdcBuffer = NULL;
 HBITMAP hBitmap = NULL;
@@ -66,13 +64,20 @@ vector<target> targets;
 target* current_target = NULL;
 queue<Point> points;
 POINTFLOAT currentAngles;
+bool EnableStopX = false;
+bool EnableStopY = false;
+bool EnableStopCenter = false;
+bool XCalibrated = false;
+bool YCalibrated = false;
+bool CenterCalibrated = false;
 const wchar_t* resolutions[] = IDC_RESOLUTIONLIST;
 int WINDOW_WIDTH;
 int WINDOW_HEIGHT;
-const int FPS_LIMIT = 50;
+const int FPS_LIMIT = 64;
 int score = 0;
-int current_target_number = -1;
+int current_target_number = 0;
 int bullet_number = 0;
+int targets_amount = 5;
 bool isplaying = false;
 float maxXAngle = 0;
 float maxYAngle = 0;
@@ -88,11 +93,10 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
     ULONG_PTR gdiplusToken;
     GdiplusStartup(&gdiplusToken, &gdiplusStartupInput, NULL);
     InitializePhotos();
-    hTargetsThread = CreateThread(nullptr, 0, InitilizeTargets, NULL, 0, nullptr);
+    hTargetsThread = CreateThread(nullptr, 0, InitilizeDefaultTargets, NULL, 0, nullptr);
     if (hTargetsThread == NULL) {
         return 1;
     }
-
     WNDCLASS wc_settings = { };
     wc_settings.lpfnWndProc = Settings_WindowProc;
     wc_settings.hInstance = hInstance;
@@ -115,7 +119,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
     {
         return 1;
     }
-    RECT newClientRect = { 0, 0, 400, 400 };
+    RECT newClientRect = { 0, 0, 400, 450 };
     AdjustWindowRect(&newClientRect, WS_OVERLAPPEDWINDOW, FALSE);
     SetWindowPos(
         hwndSettingsWindow,
@@ -149,9 +153,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
     {
         return 1;
     }
-    if (!DrawComponents(hwndSettingsWindow, hInstance)) {
-        return 1;
-    }
+    DrawComponents(hwndSettingsWindow, hInstance);
     ShowWindow(hwndSettingsWindow, nCmdShow);
     UpdateWindow(hwndSettingsWindow);
     MSG msg;
@@ -168,11 +170,71 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
     return (int)msg.wParam;
 }
 
-DWORD WINAPI InitilizeTargets(LPVOID lpParam) {
-    target t1(3, 150, 150, 600);
-    t1.setImage(imageList[3 - 3]);
-    targets.push_back(t1);
+DWORD WINAPI InitilizeDefaultTargets(LPVOID lpParam) {
+    int targets_info[][2] = IDC_TARGETSLIST;
+    for (int* target_info : targets_info) {
+        target t(target_info[0], target_info[1]);
+        t.setImage(imageList[target_info[0] - 3]);
+        targets.push_back(t);
+    }
+    //target t1(3, 150, 150, 600);
+    //t1.setImage(imageList[3 - 3]);
+    //targets.push_back(t1);
     return 0;
+}
+
+void PlaceTargetsRandom(){
+    int targets_info[][2] = IDC_TARGETSLIST;
+    int prev_x = -1;
+    int prev_y = -1;
+    int prev_target_width = -1;
+    int prev_target_height = -1;
+    int x;
+    int y;
+    int target_width;
+    int target_height;
+    bool flag;
+    random_device random_device;
+    mt19937 generator(random_device());
+    for (int i = 0; i < targets.size(); i++) {
+        target* t = &targets[i];
+        flag = true;
+        target_width = t->getWidth();
+        target_height = t->getHeight();
+        while (flag) {
+            uniform_int_distribution<> distribution_x(0, WINDOW_WIDTH - 300 - target_width);
+            uniform_int_distribution<> distribution_y(0, WINDOW_HEIGHT - 300 - target_height);
+            x = distribution_x(generator);
+            y = distribution_y(generator);
+            if (prev_x != -1) {
+                flag = ((x >= prev_x && x <= prev_x + prev_target_width) && (y >= prev_y && y <= prev_y + prev_target_height));
+            }
+            else {
+                flag = false;
+            }
+        }
+        t->setX(x);
+        t->setY(y);
+        prev_x = x;
+        prev_y = y;
+        prev_target_width = target_width;
+        prev_target_height = target_height;
+    }
+}
+
+void GenerateTargets() {
+    targets.clear();
+    random_device random_device;
+    mt19937 generator(random_device());
+    uniform_int_distribution<> distribution_section(3, 5);
+    uniform_int_distribution<> distribution_ttl(1, 5);
+    for (int i = 0; i < targets_amount; i++) {
+        int sections = distribution_section(generator);
+        int ttl = distribution_ttl(generator);
+        target t(sections, ttl);
+        t.setImage(imageList[sections - 3]);
+        targets.push_back(t);
+    }
 }
 
 DWORD WINAPI GetData(LPVOID lpParam) {
@@ -214,17 +276,22 @@ DWORD WINAPI GetData(LPVOID lpParam) {
 }
 
 void RestartGame(HWND hwnd) {
+    PlaceTargetsRandom();
     isplaying = true;
     scope.reset();
     score = 0;
-    current_target_number = -1;
+    current_target_number = 0;
     bullet_number = 0;
-    for (int i = 0; i < max_bullets_to_draw; i++) bullets[i] = Bullet();
-    SetTimer(hwnd, IDC_DRAWTIMER_ID, 0, NULL);
+    for (int i = 0; i < MAX_BULLETS; i++) bullets[i] = Bullet();
+    if (targets.size() > 0) {
+        current_target = &targets[current_target_number];
+        current_target_number++;
+    }
+    SetTimer(hwndGameWindow, IDC_DRAWTIMER_ID, 1000 * current_target->getTTL(), NULL);
 }
 
 void Shoot() {
-    if (bullet_number <= max_bullets_to_draw - 1) {
+    if (bullet_number <= MAX_BULLETS - 1) {
         bullets[bullet_number] = Bullet(scope.getX() + 10, scope.getY() + 10);
         bullet_number++;
     }
@@ -259,13 +326,13 @@ void DrawScope(HDC hdc) {
 
 void DrawTarget(HDC hdc) {
     Graphics graphics(hdc);
-    graphics.DrawImage(current_target->getImage(), current_target->x, current_target->y, current_target->width, current_target->height);
+    graphics.DrawImage(current_target->getImage(), current_target->getX(), current_target->getY(), current_target->getWidth(), current_target->getWidth());
 }
 
 void DrawBullets(HDC hdc) {
     HBRUSH hRedBrush = CreateSolidBrush(RGB(255, 0, 0));
     HBRUSH hOldBrush = (HBRUSH)SelectObject(hdc, hRedBrush);
-    for (int i = 0; i < max_bullets_to_draw; i++) {
+    for (int i = 0; i < MAX_BULLETS; i++) {
         if (bullets[i].x != -1) {
             Ellipse(hdc, bullets[i].x, bullets[i].y, bullets[i].x + 5, bullets[i].y + 5);
         }
@@ -277,7 +344,7 @@ void DrawBullets(HDC hdc) {
 void DrawScoreText(HDC hdc) {
     RECT text_rect = { WINDOW_WIDTH - 300,20,WINDOW_WIDTH,70 };
     string temp = "Score: ";
-    temp += to_string(fps);
+    temp += to_string(current_target_number-1);
     temp += "\0\0";
     wstring text(temp.begin(), temp.end());
     DrawTextW(hdc, text.c_str(), -1, &text_rect, DT_CENTER);
@@ -297,14 +364,13 @@ void DrawRestartButton(HDC hdc) {
 }
 
 void SwitchTarget() {
-    int a = targets.size();
-    if ((current_target_number < a-1) && isplaying) {  
-        current_target_number++;
+    if ((current_target_number < targets.size()) && isplaying) {
         current_target = &targets[current_target_number];
+        current_target_number+=1;
+        SetTimer(hwndGameWindow, IDC_DRAWTIMER_ID, 1000 * current_target->getTTL() + 1, NULL);
     }
     else {
-        current_target = NULL;
-        current_target_number = -1;
+        KillTimer(hwndGameWindow, IDC_DRAWTIMER_ID);
         isplaying = false;        
     }
 }
@@ -338,13 +404,28 @@ LRESULT CALLBACK Game_WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPa
     Converter converter(600, 600, 20.0f, 20.0f);
     switch (uMsg)
     {
-    case WM_DESTROY:
+    case WM_DESTROY: {
         PostQuitMessage(0);
         KillTimer(hwnd, IDC_FPSTIMER_ID);
         KillTimer(hwnd, IDC_DRAWTIMER_ID);
         KillTimer(hwnd, 5);
         return 0;
-
+    }
+    case WM_SHOWWINDOW:
+    {
+        bool flag = (bool)wParam;
+        if (flag) {
+            if (targets.size() > 0) {
+                current_target = &targets[current_target_number];
+                current_target_number++;
+            }
+            SetTimer(hwndGameWindow, IDC_DRAWTIMER_ID, 1000 * current_target->getTTL() + 1, NULL);
+            SetTimer(hwndGameWindow, IDC_FPSTIMER_ID, 1000 / FPS_LIMIT, NULL);
+            SetTimer(hwndGameWindow, 5, 1000, NULL);
+            return 0;
+        }
+        break;
+    }
     case WM_CREATE:
     {
         break;
@@ -422,10 +503,7 @@ LRESULT CALLBACK Game_WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPa
         }
         case IDC_DRAWTIMER_ID:
         {
-            KillTimer(hwnd, IDC_DRAWTIMER_ID);
             SwitchTarget();
-            if(isplaying)
-                SetTimer(hwnd, IDC_DRAWTIMER_ID, 1000 * current_target->ttl, NULL);
         }
         default:
             break;
@@ -437,6 +515,7 @@ LRESULT CALLBACK Game_WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPa
 
 int DrawComponents(HWND hwnd, HINSTANCE hInstance) {
     hLabelX = CreateWindowEx(0, L"STATIC", L"Colibrating X", WS_CHILD | WS_VISIBLE, 100, 10, 200, 20, hwnd, NULL, NULL, NULL);
+    
     hwndXTexbox = CreateWindow(
         L"EDIT",
         L"",
@@ -472,6 +551,7 @@ int DrawComponents(HWND hwnd, HINSTANCE hInstance) {
     EnableWindow(hwndButtonStopCalibratingX, FALSE);
 
     hLabelY = CreateWindowEx(0, L"STATIC", L"Calibrating Y", WS_CHILD | WS_VISIBLE, 100, 130, 200, 20, hwnd, NULL, NULL, NULL);
+    
     hwndYTexbox = CreateWindow(
         L"EDIT",
         L"",
@@ -506,7 +586,8 @@ int DrawComponents(HWND hwnd, HINSTANCE hInstance) {
     );
     EnableWindow(hwndButtonStopCalibratingY, FALSE);
 
-    hLabelSreen = CreateWindowEx(0, L"STATIC", L"Choose window size", WS_CHILD | WS_VISIBLE, 100, 250, 200, 20, hwnd, NULL, NULL, NULL);
+    hLabelResolution = CreateWindowEx(0, L"STATIC", L"Choose window size", WS_CHILD | WS_VISIBLE, 100, 250, 200, 20, hwnd, NULL, NULL, NULL);
+    
     hComboBox = CreateWindowEx(
         0,
         L"ComboBox",
@@ -543,17 +624,31 @@ int DrawComponents(HWND hwnd, HINSTANCE hInstance) {
         NULL
     );
     EnableWindow(hwndButtonStopCalibratingCenter, FALSE);
+
+    hLabelTargetsAmount = CreateWindowEx(0, L"STATIC", L"Targets amount:", WS_CHILD | WS_VISIBLE, 100, 360, 200, 20, hwnd, NULL, NULL, NULL);
+    
+    hwndTargetsAmountTexbox = CreateWindow(
+        L"EDIT",
+        L"",
+        WS_VISIBLE | WS_CHILD | WS_BORDER | ES_MULTILINE | ES_CENTER,
+        100, 380, 200, 20,
+        hwnd,
+        (HMENU)IDC_YCALIBRATING_TEXTBOX,
+        hInstance,
+        NULL
+    );
+
     hwndButtonStartGame = CreateWindow(
         L"BUTTON",
         L"Start game",
         WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON | BS_MULTILINE,
-        100, 360, 200, 30,
+        100, 410, 200, 30,
         hwnd,
         (HMENU)IDC_STARTGAME_BUTTON,
         hInstance,
         NULL
     );
-    return 1;
+    return 0;
 }
 
 void SetResolution(const wchar_t* resolution) {
@@ -597,7 +692,7 @@ LRESULT CALLBACK Settings_WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM
     }
     case WM_CTLCOLORSTATIC:
     {
-        if ((HWND)lParam == hLabelX || (HWND)lParam == hLabelY || (HWND)lParam == hLabelSreen)
+        if ((HWND)lParam == hLabelX || (HWND)lParam == hLabelY || (HWND)lParam == hLabelResolution || (HWND)lParam == hLabelTargetsAmount)
         {
             return (LRESULT)CreateSolidBrush(RGB(255, 255, 255));
         }
@@ -664,29 +759,53 @@ LRESULT CALLBACK Settings_WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM
         {
             int selectedIndex = SendMessage(hComboBox, CB_GETCURSEL, 0, 0);
             if (XCalibrated && YCalibrated && CenterCalibrated && selectedIndex != -1) {
+                int textLength = GetWindowTextLength(hwndTargetsAmountTexbox) + 1;
+                if (textLength > 1) {
+                    wchar_t* buffer = new wchar_t[textLength];
+                    wchar_t* stopwcs;
+                    GetWindowText(hwndTargetsAmountTexbox, buffer, textLength);
+                    long l = wcstol(buffer, &stopwcs, 10);
+                    if (stopwcs[0] != '\0') {
+                        MessageBox(hwndSettingsWindow, L"Not valid targets amount", L"Error", MB_ICONWARNING | MB_OK);
+                        break;
+                    }      
+                    targets_amount = l;
+                    delete[] buffer;
+                    delete[] stopwcs;
+                }
+                else {
+                    int res = MessageBox(hwndSettingsWindow, L"You dont fill in targets amount. It'll be set to default value", L"Error", MB_YESNO | MB_DEFBUTTON1);
+                    if (res == IDYES) {
+                        targets_amount = 0;
+                    }
+                    else {
+                        break;
+                    }
+                }
+                SetResolution(resolutions[selectedIndex]);
+                if (targets_amount != 0) {
+                    GenerateTargets();
+                }
+                PlaceTargetsRandom();
                 isplaying = true;
                 ShowWindow(hwndSettingsWindow, SW_HIDE);
-                SetTimer(hwndGameWindow, IDC_FPSTIMER_ID, 1000 / FPS_LIMIT, NULL);
-                SetTimer(hwndGameWindow, IDC_DRAWTIMER_ID, 0, NULL);
-                SetTimer(hwndGameWindow, 5, 1000, NULL);
-                if (hTargetsThread != NULL) {
-                    WaitForSingleObject(hTargetsThread, INFINITE);
-                    CloseHandle(hTargetsThread);
-                    hTargetsThread = NULL;
-                }
                 scope.setMaxXAngle(minXAngle);
                 scope.setMaxYAngle(minYAngle);
                 scope.setMinXAngle(minXAngle);
                 scope.setMinYAngle(minYAngle);
                 scope.setCenterXAngle(centerXAngle);
                 scope.setCenterYAngle(centerYAngle);
-                ShowWindow(hwndGameWindow, SW_SHOWDEFAULT);                
-                SetResolution(resolutions[selectedIndex]);
+                if (hTargetsThread != NULL) {
+                    WaitForSingleObject(hTargetsThread, INFINITE);
+                    CloseHandle(hTargetsThread);
+                    hTargetsThread = NULL;
+                }
                 RECT clientRect;
                 GetClientRect(hwndGameWindow, &clientRect);
                 scope.setWorkingAreaWidth(WINDOW_WIDTH);
                 scope.setWorkingAreaHeight(clientRect.bottom - clientRect.top);
                 scope.reset();
+                ShowWindow(hwndGameWindow, SW_SHOWDEFAULT);                              
             }
             else {
                 MessageBox(hwndSettingsWindow, L"First callbrate X, Y, Center, and choose screen resolution", L"Error", MB_ICONWARNING | MB_OK);

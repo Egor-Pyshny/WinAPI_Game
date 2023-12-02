@@ -18,6 +18,7 @@
 #define IDB_PNG4                        132
 #define IDC_STATIC                      -1
 #define IDC_RESOLUTIONLIST              {L"900x600",L"1280x720",L"Full screen"}
+#define IDC_TARGETSLIST                 {{3,1},{4,1},{5,1},{3,1},{4,1},{5,1}}//First param - amount of sections, second - ttl
 #define IDC_XSTARTCALIBRATING_BUTTON    15
 #define IDC_YSTARTCALIBRATING_BUTTON    16
 #define IDC_XSTOPCALIBRATING_BUTTON     17
@@ -30,6 +31,7 @@
 #define IDC_STARTGAME_BUTTON            24
 #define IDC_FPSTIMER_ID                 25
 #define IDC_DRAWTIMER_ID                26
+#define MAX_BULLETS                     30
 
 // Next default values for new objects
 // 
