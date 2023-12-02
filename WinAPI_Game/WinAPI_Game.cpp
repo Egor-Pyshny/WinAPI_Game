@@ -128,7 +128,7 @@ DWORD WINAPI InitilizeTargets(LPVOID lpParam) {
 }
 
 DWORD WINAPI GetData(LPVOID lpParam) {
-    int port = 8888;
+    /*int port = 8888;
     string ipAddressStr = "127.0.0.1";
     WSADATA data;
     WORD version = MAKEWORD(2, 2);
@@ -172,7 +172,7 @@ DWORD WINAPI GetData(LPVOID lpParam) {
         }
     }
     closesocket(listener);
-    WSACleanup();
+    WSACleanup();*/
     return 0;
 }
 
