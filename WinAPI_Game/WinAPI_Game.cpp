@@ -27,7 +27,7 @@ using namespace std;
 
 LRESULT CALLBACK Game_WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 LRESULT CALLBACK Settings_WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
-int DrawComponents(HWND hwnd, HINSTANCE hInstance);
+int DrawComponentsSettings(HWND hwnd, HINSTANCE hInstance);
 void InitializePhotos();
 void PlaceTargetsRandom();
 DWORD WINAPI InitilizeDefaultTargets(LPVOID lpParam);
@@ -45,6 +45,8 @@ HWND hwndButtonStopCalibratingY;
 HWND hwndButtonStartCalibratingCenter;
 HWND hwndButtonStopCalibratingCenter;
 HWND hwndButtonStartGame;
+HWND hwndButtonSettigs;
+HWND hwndButtonRestartGame;
 HWND hComboBox;
 HWND hwndXTexbox;
 HWND hwndYTexbox;
@@ -138,22 +140,8 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
     wc_game.style = CS_HREDRAW | CS_VREDRAW;
     wc_game.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
     RegisterClass(&wc_game);
-    hwndGameWindow = CreateWindowEx(
-        0,                                
-        L"Game",
-        L"Game",
-        WS_OVERLAPPEDWINDOW & ~WS_SIZEBOX,
-        CW_USEDEFAULT, CW_USEDEFAULT, 0, 0,
-        NULL,       
-        NULL,       
-        hInstance,  
-        NULL        
-    );
-    if (hwndGameWindow == NULL)
-    {
-        return 1;
-    }
-    DrawComponents(hwndSettingsWindow, hInstance);
+
+    DrawComponentsSettings(hwndSettingsWindow, hInstance);
     ShowWindow(hwndSettingsWindow, nCmdShow);
     UpdateWindow(hwndSettingsWindow);
     MSG msg;
@@ -350,18 +338,18 @@ void DrawScoreText(HDC hdc) {
     DrawTextW(hdc, text.c_str(), -1, &text_rect, DT_CENTER);
 }
 
-void DrawRestartButton(HDC hdc) {
-    //рисование кнопки относительно рабочей области а не по координатам через GetClientRect
-    SetBkMode(hdc, TRANSPARENT);
-    RECT restart_game = { WINDOW_WIDTH - 278,500,WINDOW_WIDTH - 20,560 };
-    //RECT restart_game_text = { 620,555,880,580 };
-    HBRUSH hBrush = CreateSolidBrush(RGB(181, 181, 181));
-    FillRect(hdc, &restart_game, hBrush);
-    DeleteObject(hBrush);
-    const WCHAR text[] = L"Restart";
-    int textSize = ARRAYSIZE(text);
-    //DrawTextW(hdc, text, textSize, &restart_game_text, DT_CENTER | DT_VCENTER);
-}
+//void DrawRestartButton(HDC hdc) {
+//    //рисование кнопки относительно рабочей области а не по координатам через GetClientRect
+//    SetBkMode(hdc, TRANSPARENT);
+//    RECT restart_game = { WINDOW_WIDTH - 278,500,WINDOW_WIDTH - 20,560 };
+//    //RECT restart_game_text = { 620,555,880,580 };
+//    HBRUSH hBrush = CreateSolidBrush(RGB(181, 181, 181));
+//    FillRect(hdc, &restart_game, hBrush);
+//    DeleteObject(hBrush);
+//    const WCHAR text[] = L"Restart";
+//    int textSize = ARRAYSIZE(text);
+//    //DrawTextW(hdc, text, textSize, &restart_game_text, DT_CENTER | DT_VCENTER);
+//}
 
 void SwitchTarget() {
     if ((current_target_number < targets.size()) && isplaying) {
@@ -401,20 +389,24 @@ void DoubleBuff(HWND hwnd) {
 
 LRESULT CALLBACK Game_WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
-    Converter converter(600, 600, 20.0f, 20.0f);
     switch (uMsg)
     {
     case WM_DESTROY: {
-        PostQuitMessage(0);
+        ShowWindow(hwndSettingsWindow, SW_SHOWNORMAL);
         KillTimer(hwnd, IDC_FPSTIMER_ID);
         KillTimer(hwnd, IDC_DRAWTIMER_ID);
         KillTimer(hwnd, 5);
-        return 0;
+        break;
     }
     case WM_SHOWWINDOW:
     {
         bool flag = (bool)wParam;
         if (flag) {
+            scope.reset();
+            current_target_number = 0;
+            score = 0;
+            bullet_number = 0;
+            isplaying = true;
             if (targets.size() > 0) {
                 current_target = &targets[current_target_number];
                 current_target_number++;
@@ -454,11 +446,12 @@ LRESULT CALLBACK Game_WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPa
             //DrawBullets(hdcBuffer);
         }
         else {
-            DrawRestartButton(hdcBuffer);
+            //DrawRestartButton(hdcBuffer);
         }
         DrawScope(hdcBuffer);
         BitBlt(hdc, 0, 0, ps.rcPaint.right, ps.rcPaint.bottom, hdcBuffer, 0, 0, SRCCOPY);
         EndPaint(hwnd, &ps);
+        ReleaseDC(hwnd, hdc);
         break;
     }
     case WM_ERASEBKGND:
@@ -482,10 +475,10 @@ LRESULT CALLBACK Game_WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPa
         {
         case IDC_FPSTIMER_ID:
         {
-            POINTFLOAT nextPoint;
+            /*POINTFLOAT nextPoint;
             POINT newCenter;
             nextPoint = currentAngles;
-            newCenter = converter.ToCoord(nextPoint);
+            newCenter = converter.ToCoord(nextPoint);*/
             scope.move_by_angles(currentAngles);    
             if (isplaying) {
                 //Shoot();
@@ -513,7 +506,7 @@ LRESULT CALLBACK Game_WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPa
     return DefWindowProc(hwnd, uMsg, wParam, lParam);
 }
 
-int DrawComponents(HWND hwnd, HINSTANCE hInstance) {
+int DrawComponentsSettings(HWND hwnd, HINSTANCE hInstance) {
     hLabelX = CreateWindowEx(0, L"STATIC", L"Colibrating X", WS_CHILD | WS_VISIBLE, 100, 10, 200, 20, hwnd, NULL, NULL, NULL);
     
     hwndXTexbox = CreateWindow(
@@ -765,13 +758,11 @@ LRESULT CALLBACK Settings_WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM
                     wchar_t* stopwcs;
                     GetWindowText(hwndTargetsAmountTexbox, buffer, textLength);
                     long l = wcstol(buffer, &stopwcs, 10);
-                    if (stopwcs[0] != '\0') {
+                    if (stopwcs[0] != '\0' || l == 0 || l >100) {
                         MessageBox(hwndSettingsWindow, L"Not valid targets amount", L"Error", MB_ICONWARNING | MB_OK);
                         break;
                     }      
                     targets_amount = l;
-                    delete[] buffer;
-                    delete[] stopwcs;
                 }
                 else {
                     int res = MessageBox(hwndSettingsWindow, L"You dont fill in targets amount. It'll be set to default value", L"Error", MB_YESNO | MB_DEFBUTTON1);
@@ -782,6 +773,17 @@ LRESULT CALLBACK Settings_WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM
                         break;
                     }
                 }
+                hwndGameWindow = CreateWindowEx(
+                    0,
+                    L"Game",
+                    L"Game",
+                    WS_OVERLAPPEDWINDOW & ~WS_SIZEBOX,
+                    CW_USEDEFAULT, CW_USEDEFAULT, 0, 0,
+                    NULL,
+                    NULL,
+                    (HINSTANCE)GetWindowLongPtr(hwndSettingsWindow, GWLP_HINSTANCE),
+                    NULL
+                );
                 SetResolution(resolutions[selectedIndex]);
                 if (targets_amount != 0) {
                     GenerateTargets();
@@ -805,7 +807,7 @@ LRESULT CALLBACK Settings_WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM
                 scope.setWorkingAreaWidth(WINDOW_WIDTH);
                 scope.setWorkingAreaHeight(clientRect.bottom - clientRect.top);
                 scope.reset();
-                ShowWindow(hwndGameWindow, SW_SHOWDEFAULT);                              
+                ShowWindow(hwndGameWindow, SW_SHOWNORMAL);
             }
             else {
                 MessageBox(hwndSettingsWindow, L"First callbrate X, Y, Center, and choose screen resolution", L"Error", MB_ICONWARNING | MB_OK);

@@ -31,6 +31,8 @@
 #define IDC_STARTGAME_BUTTON            24
 #define IDC_FPSTIMER_ID                 25
 #define IDC_DRAWTIMER_ID                26
+#define IDC_SETTINGS_BUTTON             27
+#define IDC_RESTART_BUTTON              28
 #define MAX_BULLETS                     30
 
 // Next default values for new objects
