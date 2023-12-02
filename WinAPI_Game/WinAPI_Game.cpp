@@ -226,40 +226,40 @@ void GenerateTargets() {
 }
 
 DWORD WINAPI GetData(LPVOID lpParam) {
-    int port = 8888;
-    const char* ipAddressStr = "192.168.150.2";
-    POINTFLOAT radianPoint;
-    Connection network(ipAddressStr,9998);
-    network.Connect();
-    while (true)
-    {
-        if (network.NextXY(radianPoint))
-        {
-            currentAngles = { radianPoint.x * 180/(float)M_PI , radianPoint.y * 180 / (float)M_PI };
-            if (CenterCalibrated) {
-                currentAngles.x -= centerXAngle;
-                currentAngles.y -= centerYAngle;
-            }
-            /*if (isplaying) {
-                scope_x -= currentAngles.x;
-                scope_y -= currentAngles.y;
-            }*/
-            if (EnableStopX) {
-                minXAngle = currentAngles.x;
-                std::wstring floatString = std::to_wstring(minXAngle);
-                SetWindowText(hwndXTexbox, floatString.c_str());
-            } 
-            if (EnableStopY) {
-                minYAngle = currentAngles.y;
-                std::wstring floatString = std::to_wstring(minYAngle);
-                SetWindowText(hwndYTexbox, floatString.c_str());
-            } 
-            if (EnableStopCenter) {
-                centerYAngle = currentAngles.y;
-                centerXAngle = currentAngles.x;
-            }
-        }
-    }
+    //int port = 8888;
+    //const char* ipAddressStr = "192.168.150.2";
+    //POINTFLOAT radianPoint;
+    //Connection network(ipAddressStr,9998);
+    //network.Connect();
+    //while (true)
+    //{
+    //    if (network.NextXY(radianPoint))
+    //    {
+    //        currentAngles = { radianPoint.x * 180/(float)M_PI , radianPoint.y * 180 / (float)M_PI };
+    //        if (CenterCalibrated) {
+    //            currentAngles.x -= centerXAngle;
+    //            currentAngles.y -= centerYAngle;
+    //        }
+    //        /*if (isplaying) {
+    //            scope_x -= currentAngles.x;
+    //            scope_y -= currentAngles.y;
+    //        }*/
+    //        if (EnableStopX) {
+    //            minXAngle = currentAngles.x;
+    //            std::wstring floatString = std::to_wstring(minXAngle);
+    //            SetWindowText(hwndXTexbox, floatString.c_str());
+    //        } 
+    //        if (EnableStopY) {
+    //            minYAngle = currentAngles.y;
+    //            std::wstring floatString = std::to_wstring(minYAngle);
+    //            SetWindowText(hwndYTexbox, floatString.c_str());
+    //        } 
+    //        if (EnableStopCenter) {
+    //            centerYAngle = currentAngles.y;
+    //            centerXAngle = currentAngles.x;
+    //        }
+    //    }
+    //}
     return 0;
 }
 
