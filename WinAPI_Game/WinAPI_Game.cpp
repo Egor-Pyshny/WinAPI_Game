@@ -412,7 +412,7 @@ LRESULT CALLBACK Game_WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPa
                 current_target_number++;
             }
             SetTimer(hwndGameWindow, IDC_DRAWTIMER_ID, 1000 * current_target->getTTL() + 1, NULL);
-            SetTimer(hwndGameWindow, IDC_FPSTIMER_ID, 1000 / FPS_LIMIT, NULL);
+            SetTimer(hwndGameWindow, IDC_FPSTIMER_ID, 15, NULL);
             SetTimer(hwndGameWindow, 5, 1000, NULL);
             return 0;
         }
@@ -691,18 +691,6 @@ LRESULT CALLBACK Settings_WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM
         }
         break;
     }
-    case WM_MOUSEMOVE:
-    {
-        break;
-    }
-    case WM_KEYDOWN:
-    {
-        break;
-    }
-    case WM_PAINT:
-    {
-        break;
-    }
     case WM_COMMAND:
     {
         switch (LOWORD(wParam))
@@ -753,7 +741,7 @@ LRESULT CALLBACK Settings_WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM
             int selectedIndex = SendMessage(hComboBox, CB_GETCURSEL, 0, 0);
             if (XCalibrated && YCalibrated && CenterCalibrated && selectedIndex != -1) {
                 int textLength = GetWindowTextLength(hwndTargetsAmountTexbox) + 1;
-                if (textLength > 1) {
+                /*if (textLength > 1) {
                     wchar_t* buffer = new wchar_t[textLength];
                     wchar_t* stopwcs;
                     GetWindowText(hwndTargetsAmountTexbox, buffer, textLength);
@@ -772,7 +760,7 @@ LRESULT CALLBACK Settings_WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM
                     else {
                         break;
                     }
-                }
+                }*/
                 hwndGameWindow = CreateWindowEx(
                     0,
                     L"Game",
@@ -785,12 +773,12 @@ LRESULT CALLBACK Settings_WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM
                     NULL
                 );
                 SetResolution(resolutions[selectedIndex]);
-                if (targets_amount != 0) {
+                /*if (targets_amount != 0) {
                     GenerateTargets();
-                }
+                }*/
                 PlaceTargetsRandom();
                 isplaying = true;
-                ShowWindow(hwndSettingsWindow, SW_HIDE);
+                //ShowWindow(hwndSettingsWindow, SW_HIDE);
                 scope.setMaxXAngle(minXAngle);
                 scope.setMaxYAngle(minYAngle);
                 scope.setMinXAngle(minXAngle);
@@ -808,6 +796,7 @@ LRESULT CALLBACK Settings_WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM
                 scope.setWorkingAreaHeight(clientRect.bottom - clientRect.top);
                 scope.reset();
                 ShowWindow(hwndGameWindow, SW_SHOWNORMAL);
+                UpdateWindow(hwndGameWindow);
             }
             else {
                 MessageBox(hwndSettingsWindow, L"First callbrate X, Y, Center, and choose screen resolution", L"Error", MB_ICONWARNING | MB_OK);
