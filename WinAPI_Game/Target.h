@@ -8,20 +8,28 @@ using namespace Gdiplus;
 class target
 {
 public:
+	target(int section, int x, int y, int ttl);
+	target(int section, int ttl);
+	void setImage(Bitmap* bmp);
+	void setX(int x);
+	void setY(int y);
+	Bitmap* getImage();
+	int getX();
+	int getY();
+	int getWidth();
+	int getHeight();
+	int getTTL();
+	int getPoints(Point bullet_point);
+	static const int types = 3;
+private:
 	int section;
 	int x;
 	int y;
 	int ttl;
 	int width;
 	int height;
-	target(int section, int x, int y, int ttl);
-	void setImage(Bitmap* bmp);
-	Bitmap* getImage();
-	int getPoints(Point bullet_point);
-	static const int types = 3;
-private:
 	static const int max_sections = 5;
-	Bitmap* image;
+	Bitmap* image = NULL;
 	Point getCenter();
 	double distance(Point c, Point bullet_point);
 	int awards[types][max_sections] = {

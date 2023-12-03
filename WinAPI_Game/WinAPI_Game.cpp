@@ -1,15 +1,11 @@
-﻿#ifndef UNICODE
+#ifndef UNICODE
 #define UNICODE
 #endif 
+#define _USE_MATH_DEFINES
 
 #pragma comment(lib, "ws2_32.lib")
 #include <WS2tcpip.h>
-//#include <iostream>
-//#include <stdio.h>
-//#include <wchar.h>
-//#include <commctrl.h>
 #include <Windows.h>
-//#include <winuser.h>
 #include <string>
 #include <gdiplus.h>
 #include <vector>
@@ -19,39 +15,80 @@
 #include <queue>
 #include "Bullet.h"
 #include <windowsx.h>
+#include <cmath>
+#include <cwchar>
+#include <iostream>
+#include <random>
+#include "Connection.h"
+#include "Converter.h"
 
 using namespace Gdiplus;
 using namespace std;
 
-LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
+LRESULT CALLBACK Game_WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
+LRESULT CALLBACK Settings_WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
+int DrawComponentsSettings(HWND hwnd, HINSTANCE hInstance);
+int DrawComponentsGame(HWND hwnd, HINSTANCE hInstance);
 void InitializePhotos();
-DWORD WINAPI InitilizeTargets(LPVOID lpParam);
+void PlaceTargetsRandom();
+DWORD WINAPI InitilizeDefaultTargets(LPVOID lpParam);
 DWORD WINAPI GetData(LPVOID lpParam);
-DWORD WINAPI RefreshPosition(LPVOID lpParam);
 
+vector<int> v;
+HWND hLabelX;
+HWND hLabelY;
+HWND hLabelTargetsAmount;
+HWND hLabelResolution;
+HWND hwndButtonStartCalibratingX;
+HWND hwndButtonStopCalibratingX;
+HWND hwndButtonStartCalibratingY;
+HWND hwndButtonStopCalibratingY;
+HWND hwndButtonStartCalibratingCenter;
+HWND hwndButtonStopCalibratingCenter;
+HWND hwndButtonStartGame;
+HWND hwndButtonSettigs;
+HWND hwndButtonRestartGame;
+HWND hComboBox;
+HWND hwndXTexbox;
+HWND hwndYTexbox;
+HWND hwndTargetsAmountTexbox;
+HWND hwndGameWindow;
+HWND hwndSettingsWindow;
+HANDLE hTargetsThread;
+HFONT hTextBoxFont;
 Bitmap* imageList[target::types];
-const int max_bullets_to_draw = 50;
-Bullet bullets[max_bullets_to_draw];
+Bullet bullets[MAX_BULLETS];
 Scope scope;
 HDC hdcBuffer = NULL;
 HBITMAP hBitmap = NULL;
 HBITMAP hOldBitmap = NULL;
 Bitmap* scope_png = NULL;
-HANDLE g_mutex;
 vector<target> targets;
 target* current_target = NULL;
 queue<Point> points;
-const UINT_PTR fps_timer_id = 1;
-const UINT_PTR draw_timer_id = 2;
-const int WINDOW_WIDTH = 900;
-const int WINDOW_HEIGHT = 600;
-const int FPS_LIMIT = 50;
-int scope_x;
-int scope_y;
+POINTFLOAT currentAngles;
+bool EnableStopX = false;
+bool EnableStopY = false;
+bool EnableStopCenter = false;
+bool XCalibrated = false;
+bool YCalibrated = false;
+bool CenterCalibrated = false;
+const wchar_t* resolutions[] = IDC_RESOLUTIONLIST;
+int WINDOW_WIDTH;
+int WINDOW_HEIGHT;
+const int FPS_LIMIT = 64;
 int score = 0;
-int current_target_number = -1;
+int current_target_number = 0;
 int bullet_number = 0;
-bool isplaying = true;
+int targets_amount = 5;
+bool isplaying = false;
+float maxXAngle = 0;
+float maxYAngle = 0;
+float minXAngle = 0;
+float minYAngle = 0;
+float centerXAngle = 0;
+float centerYAngle = 0;
+int fps = 0;
 
 int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine, int nCmdShow)
 {
@@ -59,148 +96,191 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
     ULONG_PTR gdiplusToken;
     GdiplusStartup(&gdiplusToken, &gdiplusStartupInput, NULL);
     InitializePhotos();
-    HANDLE hThread = CreateThread(nullptr, 0, InitilizeTargets, NULL, 0, nullptr);
-    if (hThread == NULL) {
-        CloseHandle(g_mutex);
+    hTargetsThread = CreateThread(nullptr, 0, InitilizeDefaultTargets, NULL, 0, nullptr);
+    if (hTargetsThread == NULL) {
         return 1;
     }
-    g_mutex = CreateMutexW(NULL, FALSE, NULL);
-    if (g_mutex == NULL) {
-        CloseHandle(hThread);
-        return 1;
-    }
-    const wchar_t CLASS_NAME[] = L"Game";
-    WNDCLASS wc = { };
-    wc.lpfnWndProc = WindowProc;
-    wc.hInstance = hInstance;
-    wc.lpszClassName = CLASS_NAME;
-    wc.style = CS_HREDRAW | CS_VREDRAW;
-    wc.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
-    RegisterClass(&wc);
-    HWND hwnd = CreateWindowEx(
-        0,                                
-        CLASS_NAME,                       
-        L"Time killer",                   
+    WNDCLASS wc_settings = { };
+    wc_settings.lpfnWndProc = Settings_WindowProc;
+    wc_settings.hInstance = hInstance;
+    wc_settings.lpszClassName = L"Settings";
+    wc_settings.style = CS_HREDRAW | CS_VREDRAW;
+    wc_settings.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
+    RegisterClass(&wc_settings);
+    hwndSettingsWindow = CreateWindowEx(
+        0,
+        L"Settings",
+        L"Settings",
         WS_OVERLAPPEDWINDOW & ~WS_SIZEBOX,
-        CW_USEDEFAULT, CW_USEDEFAULT, WINDOW_WIDTH+16, WINDOW_HEIGHT+39,
-        NULL,       
-        NULL,       
-        hInstance,  
-        NULL        
+        CW_USEDEFAULT, CW_USEDEFAULT, 0, 0,
+        NULL,
+        NULL,
+        hInstance,
+        NULL
     );
-    if (hwnd == NULL)
+    if (hwndSettingsWindow == NULL)
     {
-        return 0;
+        return 1;
     }
-    WaitForSingleObject(g_mutex, INFINITE);
-    SetTimer(hwnd, fps_timer_id, 1000 / FPS_LIMIT, NULL);
-    SetTimer(hwnd, draw_timer_id, 0, NULL);
-    ShowWindow(hwnd, nCmdShow);
-    UpdateWindow(hwnd);
+    RECT newClientRect = { 0, 0, 400, 450 };
+    AdjustWindowRect(&newClientRect, WS_OVERLAPPEDWINDOW, FALSE);
+    SetWindowPos(
+        hwndSettingsWindow,
+        NULL,
+        0, 0,
+        newClientRect.right - newClientRect.left,
+        newClientRect.bottom - newClientRect.top,
+        SWP_NOMOVE | SWP_NOZORDER
+    );
+
+    
+    WNDCLASS wc_game = { };
+    wc_game.lpfnWndProc = Game_WindowProc;
+    wc_game.hInstance = hInstance;
+    wc_game.lpszClassName = L"Game";
+    wc_game.style = CS_HREDRAW | CS_VREDRAW;
+    wc_game.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
+    RegisterClass(&wc_game);
+
+    DrawComponentsSettings(hwndSettingsWindow, hInstance);
+    ShowWindow(hwndSettingsWindow, nCmdShow);
+    UpdateWindow(hwndSettingsWindow);
     MSG msg;
     HANDLE data_thread = CreateThread(nullptr, 0, GetData, NULL, 0, nullptr);
     if (data_thread == NULL) {
-        return 1;
-    }
-    HANDLE refresh_thread = CreateThread(nullptr, 0, RefreshPosition, NULL, 0, nullptr);
-    if (refresh_thread == NULL) {
         return 1;
     }
     while (GetMessage(&msg, NULL, 0, 0)) {
         TranslateMessage(&msg);
         DispatchMessage(&msg);
     }
-
     GdiplusShutdown(gdiplusToken);
-    CloseHandle(hThread);
     CloseHandle(data_thread);
-    CloseHandle(refresh_thread);
-    CloseHandle(g_mutex);
     return (int)msg.wParam;
 }
 
-DWORD WINAPI InitilizeTargets(LPVOID lpParam) {
-    target t1(3, 150, 150, 2);
-    t1.setImage(imageList[3 - 3]);
-    targets.push_back(t1);
-    ReleaseMutex(g_mutex);
+DWORD WINAPI InitilizeDefaultTargets(LPVOID lpParam) {
+    int targets_info[][2] = IDC_TARGETSLIST;
+    for (int* target_info : targets_info) {
+        target t(target_info[0], target_info[1]);
+        t.setImage(imageList[target_info[0] - 3]);
+        targets.push_back(t);
+    }
+    //target t1(3, 150, 150, 600);
+    //t1.setImage(imageList[3 - 3]);
+    //targets.push_back(t1);
     return 0;
+}
+
+void PlaceTargetsRandom(){
+    int targets_info[][2] = IDC_TARGETSLIST;
+    int prev_x = -1;
+    int prev_y = -1;
+    int prev_target_width = -1;
+    int prev_target_height = -1;
+    int x;
+    int y;
+    int target_width;
+    int target_height;
+    bool flag;
+    random_device random_device;
+    mt19937 generator(random_device());
+    for (int i = 0; i < targets.size(); i++) {
+        target* t = &targets[i];
+        flag = true;
+        target_width = t->getWidth();
+        target_height = t->getHeight();
+        while (flag) {
+            uniform_int_distribution<> distribution_x(0, WINDOW_WIDTH - 300 - target_width);
+            uniform_int_distribution<> distribution_y(0, WINDOW_HEIGHT - 300 - target_height);
+            x = distribution_x(generator);
+            y = distribution_y(generator);
+            if (prev_x != -1) {
+                flag = ((x >= prev_x && x <= prev_x + prev_target_width) && (y >= prev_y && y <= prev_y + prev_target_height));
+            }
+            else {
+                flag = false;
+            }
+        }
+        t->setX(x);
+        t->setY(y);
+        prev_x = x;
+        prev_y = y;
+        prev_target_width = target_width;
+        prev_target_height = target_height;
+    }
+}
+
+void GenerateTargets() {
+    targets.clear();
+    random_device random_device;
+    mt19937 generator(random_device());
+    uniform_int_distribution<> distribution_section(3, 5);
+    uniform_int_distribution<> distribution_ttl(1, 5);
+    for (int i = 0; i < targets_amount; i++) {
+        int sections = distribution_section(generator);
+        int ttl = distribution_ttl(generator);
+        target t(sections, ttl);
+        t.setImage(imageList[sections - 3]);
+        targets.push_back(t);
+    }
 }
 
 DWORD WINAPI GetData(LPVOID lpParam) {
-    /*int port = 8888;
-    string ipAddressStr = "127.0.0.1";
-    WSADATA data;
-    WORD version = MAKEWORD(2, 2);
-    if (WSAStartup(version, &data) != 0) {
-        throw 1;
-    }
-    sockaddr_in localEndPoint;
-    localEndPoint.sin_family = AF_INET;
-    localEndPoint.sin_port = htons(port);
-    inet_pton(AF_INET, ipAddressStr.c_str(), &localEndPoint.sin_addr);
-    SOCKET listener = socket(AF_INET, SOCK_STREAM, 0);
-    if (listener == INVALID_SOCKET) {
-        WSACleanup();
-        throw 1;
-    }
-    if (connect(listener, (sockaddr*)&localEndPoint, sizeof(localEndPoint)) == SOCKET_ERROR) {
-        closesocket(listener);
-        WSACleanup();
-        throw 1;
-    }
-    char tmp;
-    recv(listener, &tmp, 1, 0);
-    send(listener, &tmp, 1, 0);
-    char buffer[4];
-    int i = 1;
-    float f_y;
-    float f_x;
-    while (true) {
-        while (isplaying) {
-            int g = recv(listener, buffer, 4, 0);
-            if (g != 0) {
-                if (i == 2) f_y = *((float*)(buffer)); else if (i == 1) f_x = *((float*)(buffer));
-                if (i != 3) {
-                    i++;
-                }
-                else if (i == 3) {
-                    points.push(Point(f_x, f_y));
-                    i == 1;
-                }
-            }
-        }
-    }
-    closesocket(listener);
-    WSACleanup();*/
-    return 0;
-}
-
-DWORD WINAPI RefreshPosition(LPVOID lpParam) {
-    while (isplaying) {
-        if (points.size() > 0) {
-            Point p = points.front();
-            points.pop();
-            scope.move_by_angles(p.X,p.Y);
-        }
-    }
+    //int port = 8888;
+    //const char* ipAddressStr = "192.168.150.2";
+    //POINTFLOAT radianPoint;
+    //Connection network(ipAddressStr,9998);
+    //network.Connect();
+    //while (true)
+    //{
+    //    if (network.NextXY(radianPoint))
+    //    {
+    //        currentAngles = { radianPoint.x * 180/(float)M_PI , radianPoint.y * 180 / (float)M_PI };
+    //        if (CenterCalibrated) {
+    //            currentAngles.x -= centerXAngle;
+    //            currentAngles.y -= centerYAngle;
+    //        }
+    //        /*if (isplaying) {
+    //            scope_x -= currentAngles.x;
+    //            scope_y -= currentAngles.y;
+    //        }*/
+    //        if (EnableStopX) {
+    //            minXAngle = currentAngles.x;
+    //            std::wstring floatString = std::to_wstring(minXAngle);
+    //            SetWindowText(hwndXTexbox, floatString.c_str());
+    //        } 
+    //        if (EnableStopY) {
+    //            minYAngle = currentAngles.y;
+    //            std::wstring floatString = std::to_wstring(minYAngle);
+    //            SetWindowText(hwndYTexbox, floatString.c_str());
+    //        } 
+    //        if (EnableStopCenter) {
+    //            centerYAngle = currentAngles.y;
+    //            centerXAngle = currentAngles.x;
+    //        }
+    //    }
+    //}
     return 0;
 }
 
 void RestartGame(HWND hwnd) {
+    PlaceTargetsRandom();
     isplaying = true;
     scope.reset();
-    scope_x = scope.getX();
-    scope_y = scope.getY();
     score = 0;
-    current_target_number = -1;
+    current_target_number = 0;
     bullet_number = 0;
-    for (int i = 0; i < max_bullets_to_draw; i++) bullets[i] = Bullet();
-    SetTimer(hwnd, draw_timer_id, 0, NULL);
+    for (int i = 0; i < MAX_BULLETS; i++) bullets[i] = Bullet();
+    if (targets.size() > 0) {
+        current_target = &targets[current_target_number];
+        current_target_number++;
+    }
+    SetTimer(hwndGameWindow, IDC_DRAWTIMER_ID, 1000 * current_target->getTTL(), NULL);
 }
 
 void Shoot() {
-    if (bullet_number <= max_bullets_to_draw - 1) {
+    if (bullet_number <= MAX_BULLETS - 1) {
         bullets[bullet_number] = Bullet(scope.getX() + 10, scope.getY() + 10);
         bullet_number++;
     }
@@ -220,7 +300,7 @@ void InitializePhotos() {
 }
 
 void DrawDivider(HDC hdc) {
-    RECT rect = { 600, 0, 602, 600 };
+    RECT rect = { WINDOW_WIDTH - 300, 0, WINDOW_WIDTH - 298, WINDOW_HEIGHT };
     HBRUSH hBrush = CreateSolidBrush(RGB(0, 0, 0));
     FillRect(hdc, &rect, hBrush);
     DeleteObject(hBrush);
@@ -230,18 +310,18 @@ void DrawScope(HDC hdc) {
     Graphics graphics(hdc); 
     UINT width = scope_png->GetWidth();
     UINT height = scope_png->GetHeight();
-    graphics.DrawImage(scope_png, scope_x, scope_y, width, height);
+    graphics.DrawImage(scope_png, scope.getX(), scope.getY(), width, height);
 }
 
 void DrawTarget(HDC hdc) {
     Graphics graphics(hdc);
-    graphics.DrawImage(current_target->getImage(), current_target->x, current_target->y, current_target->width, current_target->height);
+    graphics.DrawImage(current_target->getImage(), current_target->getX(), current_target->getY(), current_target->getWidth(), current_target->getWidth());
 }
 
 void DrawBullets(HDC hdc) {
     HBRUSH hRedBrush = CreateSolidBrush(RGB(255, 0, 0));
     HBRUSH hOldBrush = (HBRUSH)SelectObject(hdc, hRedBrush);
-    for (int i = 0; i < max_bullets_to_draw; i++) {
+    for (int i = 0; i < MAX_BULLETS; i++) {
         if (bullets[i].x != -1) {
             Ellipse(hdc, bullets[i].x, bullets[i].y, bullets[i].x + 5, bullets[i].y + 5);
         }
@@ -251,35 +331,35 @@ void DrawBullets(HDC hdc) {
 }
 
 void DrawScoreText(HDC hdc) {
-    RECT text_rect = { 600,20,900,70 };
+    RECT text_rect = { WINDOW_WIDTH - 300,20,WINDOW_WIDTH,70 };
     string temp = "Score: ";
-    temp += to_string(score);
+    temp += to_string(current_target_number-1);
     temp += "\0\0";
     wstring text(temp.begin(), temp.end());
     DrawTextW(hdc, text.c_str(), -1, &text_rect, DT_CENTER);
 }
 
 void DrawRestartButton(HDC hdc) {
+    //рисование кнопки относительно рабочей области а не по координатам через GetClientRect
     SetBkMode(hdc, TRANSPARENT);
-    RECT restart_game = { 622,550,880,580 };
-    RECT restart_game_text = { 620,555,880,580 };
+    RECT restart_game = { WINDOW_WIDTH - 280,500,WINDOW_WIDTH - 34,560 };
+    //RECT restart_game_text = { 620,555,880,580 };
     HBRUSH hBrush = CreateSolidBrush(RGB(181, 181, 181));
     FillRect(hdc, &restart_game, hBrush);
     DeleteObject(hBrush);
     const WCHAR text[] = L"Restart";
     int textSize = ARRAYSIZE(text);
-    DrawTextW(hdc, text, textSize, &restart_game_text, DT_CENTER | DT_VCENTER);
+    //DrawTextW(hdc, text, textSize, &restart_game_text, DT_CENTER | DT_VCENTER);
 }
 
 void SwitchTarget() {
-    int a = targets.size();
-    if ((current_target_number < a-1) && isplaying) {  
-        current_target_number++;
+    if ((current_target_number < targets.size()) && isplaying) {
         current_target = &targets[current_target_number];
+        current_target_number+=1;
+        SetTimer(hwndGameWindow, IDC_DRAWTIMER_ID, 1000 * current_target->getTTL() + 1, NULL);
     }
     else {
-        current_target = NULL;
-        current_target_number = -1;
+        KillTimer(hwndGameWindow, IDC_DRAWTIMER_ID);
         isplaying = false;        
     }
 }
@@ -308,20 +388,45 @@ void DoubleBuff(HWND hwnd) {
     ReleaseDC(hwnd, hdc);
 }
 
-LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
+void ReleaseDoubleBuffer() {
+    SelectObject(hdcBuffer, hOldBitmap);
+    DeleteObject(hBitmap);
+    DeleteDC(hdcBuffer);
+}
+
+LRESULT CALLBACK Game_WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
     switch (uMsg)
     {
-    case WM_DESTROY:
-        PostQuitMessage(0);
-        KillTimer(hwnd, fps_timer_id);
-        return 0;
-
+    case WM_DESTROY: {
+        ShowWindow(hwndSettingsWindow, SW_SHOWNORMAL);
+        KillTimer(hwnd, IDC_FPSTIMER_ID);
+        KillTimer(hwnd, IDC_DRAWTIMER_ID);
+        KillTimer(hwnd, 5);
+        break;
+    }
+    case WM_SHOWWINDOW:
+    {
+        bool flag = (bool)wParam;
+        if (flag) {
+            scope.reset();
+            current_target_number = 0;
+            score = 0;
+            bullet_number = 0;
+            isplaying = true;
+            if (targets.size() > 0) {
+                current_target = &targets[current_target_number];
+                current_target_number++;
+            }
+            SetTimer(hwndGameWindow, IDC_DRAWTIMER_ID, 1000 * current_target->getTTL() + 1, NULL);
+            SetTimer(hwndGameWindow, IDC_FPSTIMER_ID, 15, NULL);
+            SetTimer(hwndGameWindow, 5, 1000, NULL);
+            return 0;
+        }
+        break;
+    }
     case WM_CREATE:
     {
-        scope.reset();
-        scope_x = scope.getX();
-        scope_y = scope.getY();
         break;
     }
     case WM_MOUSEMOVE: 
@@ -335,6 +440,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
     }
     case WM_PAINT:
     {
+        fps++;
         PAINTSTRUCT ps;
         HDC hdc = BeginPaint(hwnd, &ps);
         FillBackground(hwnd, hdcBuffer);
@@ -344,14 +450,13 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
             if (current_target != NULL) {
                 DrawTarget(hdcBuffer);
             }
-            DrawBullets(hdcBuffer);
+            //DrawBullets(hdcBuffer);
         }
-        else {
-            DrawRestartButton(hdcBuffer);
-        }
+        DrawRestartButton(hdcBuffer);
         DrawScope(hdcBuffer);
         BitBlt(hdc, 0, 0, ps.rcPaint.right, ps.rcPaint.bottom, hdcBuffer, 0, 0, SRCCOPY);
         EndPaint(hwnd, &ps);
+        ReleaseDoubleBuffer();
         break;
     }
     case WM_ERASEBKGND:
@@ -373,29 +478,341 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
     {
         switch ((UINT_PTR)wParam)
         {
-        case fps_timer_id: 
+        case IDC_FPSTIMER_ID:
         {
-            scope_x = scope.getX();
-            scope_y = scope.getY();
+            /*POINTFLOAT nextPoint;
+            POINT newCenter;
+            nextPoint = currentAngles;
+            newCenter = converter.ToCoord(nextPoint);*/
+            scope.move_by_angles(currentAngles);    
             if (isplaying) {
-                Shoot();
+                //Shoot();
                 CalculateScore();
             }
             DoubleBuff(hwnd);
+            //fps++;
             InvalidateRect(hwnd, NULL, TRUE);
-
             break;
         }
-        case draw_timer_id:
+        case 5:
         {
-            KillTimer(hwnd, draw_timer_id);
+            v.push_back(fps);
+            fps = 0;
+        }
+        case IDC_DRAWTIMER_ID:
+        {
             SwitchTarget();
-            if(isplaying)
-                SetTimer(hwnd, draw_timer_id, 1000 * current_target->ttl, NULL);
         }
         default:
             break;
         }
+    }
+    }
+    return DefWindowProc(hwnd, uMsg, wParam, lParam);
+}
+
+int DrawComponentsSettings(HWND hwnd, HINSTANCE hInstance) {
+    hLabelX = CreateWindowEx(0, L"STATIC", L"Colibrating X", WS_CHILD | WS_VISIBLE, 100, 10, 200, 20, hwnd, NULL, NULL, NULL);
+    
+    hwndXTexbox = CreateWindow(
+        L"EDIT",
+        L"",
+        WS_VISIBLE | WS_CHILD | WS_BORDER | ES_MULTILINE | ES_CENTER,
+        100, 30, 200, 45,
+        hwnd,
+        (HMENU)IDC_XCALIBRATING_TEXTBOX,
+        hInstance,
+        NULL
+    );
+    SendMessage(hwndXTexbox, WM_SETFONT, (WPARAM)hTextBoxFont, TRUE);
+    SendMessage(hwndXTexbox, EM_SETREADONLY, TRUE, 0);
+    hwndButtonStartCalibratingX = CreateWindow(
+        L"BUTTON",
+        L"Start calibrating X",
+        WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON | BS_MULTILINE,
+        100, 80, 95, 40,
+        hwnd,
+        (HMENU)IDC_XSTARTCALIBRATING_BUTTON,
+        hInstance,
+        NULL
+    );
+    hwndButtonStopCalibratingX = CreateWindow(
+        L"BUTTON",
+        L"Stop calibrating X",
+        WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON | BS_MULTILINE,
+        205, 80, 95, 40,
+        hwnd,
+        (HMENU)IDC_XSTOPCALIBRATING_BUTTON,
+        hInstance,
+        NULL
+    );
+    EnableWindow(hwndButtonStopCalibratingX, FALSE);
+
+    hLabelY = CreateWindowEx(0, L"STATIC", L"Calibrating Y", WS_CHILD | WS_VISIBLE, 100, 130, 200, 20, hwnd, NULL, NULL, NULL);
+    
+    hwndYTexbox = CreateWindow(
+        L"EDIT",
+        L"",
+        WS_VISIBLE | WS_CHILD | WS_BORDER | ES_MULTILINE | ES_CENTER,
+        100, 150, 200, 45,
+        hwnd,
+        (HMENU)IDC_YCALIBRATING_TEXTBOX,
+        hInstance,
+        NULL
+    );
+    SendMessage(hwndYTexbox, WM_SETFONT, (WPARAM)hTextBoxFont, TRUE);
+    SendMessage(hwndYTexbox, EM_SETREADONLY, TRUE, 0);
+    hwndButtonStartCalibratingY = CreateWindow(
+        L"BUTTON",
+        L"Start calibrating Y",
+        WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON | BS_MULTILINE,
+        100, 200, 95, 40,
+        hwnd,
+        (HMENU)IDC_YSTARTCALIBRATING_BUTTON,
+        hInstance,
+        NULL
+    );
+    hwndButtonStopCalibratingY = CreateWindow(
+        L"BUTTON",
+        L"Stop calibrating Y",
+        WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON | BS_MULTILINE,
+        205, 200, 95, 40,
+        hwnd,
+        (HMENU)IDC_YSTOPCALIBRATING_BUTTON,
+        hInstance,
+        NULL
+    );
+    EnableWindow(hwndButtonStopCalibratingY, FALSE);
+    hLabelResolution = CreateWindowEx(0, L"STATIC", L"Choose window size", WS_CHILD | WS_VISIBLE, 100, 250, 200, 20, hwnd, NULL, NULL, NULL);
+    
+    hComboBox = CreateWindowEx(
+        0,
+        L"ComboBox",
+        NULL,
+        CBS_DROPDOWN | WS_VSCROLL | WS_CHILD | WS_OVERLAPPED | WS_VISIBLE,
+        100, 270, 200, 90,
+        hwnd,
+        (HMENU)IDC_RESOLUTION_DROPLIST,
+        hInstance,
+        NULL
+    );
+    for (const wchar_t* resolution : resolutions) {
+        SendMessage(hComboBox, CB_ADDSTRING, 0, (LPARAM)resolution);
+    }
+
+    hwndButtonStartCalibratingCenter = CreateWindow(
+        L"BUTTON",
+        L"Start calibrating center",
+        WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON | BS_MULTILINE,
+        100, 300, 95, 50,
+        hwnd,
+        (HMENU)IDC_STARTCALIBRATINGCENTER_BUTTON,
+        hInstance,
+        NULL
+    );
+    hwndButtonStopCalibratingCenter = CreateWindow(
+        L"BUTTON",
+        L"Stop calibrating center",
+        WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON | BS_MULTILINE,
+        205, 300, 95, 50,
+        hwnd,
+        (HMENU)IDC_STOPCALIBRATINGCENTER_BUTTON,
+        hInstance,
+        NULL
+    );
+    EnableWindow(hwndButtonStopCalibratingCenter, FALSE);
+
+    hLabelTargetsAmount = CreateWindowEx(0, L"STATIC", L"Targets amount:", WS_CHILD | WS_VISIBLE, 100, 360, 200, 20, hwnd, NULL, NULL, NULL);
+    
+    hwndTargetsAmountTexbox = CreateWindow(
+        L"EDIT",
+        L"",
+        WS_VISIBLE | WS_CHILD | WS_BORDER | ES_MULTILINE | ES_CENTER,
+        100, 380, 200, 20,
+        hwnd,
+        (HMENU)IDC_YCALIBRATING_TEXTBOX,
+        hInstance,
+        NULL
+    );
+
+    hwndButtonStartGame = CreateWindow(
+        L"BUTTON",
+        L"Start game",
+        WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON | BS_MULTILINE,
+        100, 410, 200, 30,
+        hwnd,
+        (HMENU)IDC_STARTGAME_BUTTON,
+        hInstance,
+        NULL
+    );
+    return 0;
+}
+
+int DrawComponentsGame(HWND hwnd, HINSTANCE hInstance) {
+    return 0;
+}
+
+void SetResolution(const wchar_t* resolution) {
+    wstring wstr(resolution);
+    int pos = wstr.find(L"x");
+    if (pos != -1) {
+        wstring width = wstr.substr(0, pos);
+        wstring height = wstr.substr(pos + 1);
+        WINDOW_WIDTH = stoi(width);
+        WINDOW_HEIGHT = stoi(height);
+    }
+    else {
+        RECT workArea;
+        SystemParametersInfo(SPI_GETWORKAREA, 0, &workArea, 0);
+        WINDOW_WIDTH = workArea.right - workArea.left;
+        WINDOW_HEIGHT = workArea.bottom - workArea.top;
+    }
+    SetWindowPos(
+        hwndGameWindow,
+        NULL,
+        0, 0,
+        WINDOW_WIDTH,
+        WINDOW_HEIGHT,
+        SWP_NOMOVE | SWP_NOZORDER
+    );
+}
+
+LRESULT CALLBACK Settings_WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
+{
+    switch (uMsg)
+    {
+    case WM_DESTROY:
+    {   
+        PostQuitMessage(0);
+        return 0;
+    }
+    case WM_CREATE:
+    {
+        hTextBoxFont = CreateFontW(39, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET, OUT_TT_PRECIS, CLIP_DEFAULT_PRECIS, ANTIALIASED_QUALITY, FF_DONTCARE | DEFAULT_PITCH, L"Arial");
+        break;
+    }
+    case WM_CTLCOLORSTATIC:
+    {
+        if ((HWND)lParam == hLabelX || (HWND)lParam == hLabelY || (HWND)lParam == hLabelResolution || (HWND)lParam == hLabelTargetsAmount)
+        {
+            return (LRESULT)CreateSolidBrush(RGB(255, 255, 255));
+        }
+        break;
+    }
+    case WM_COMMAND:
+    {
+        switch (LOWORD(wParam))
+        {
+        case IDC_XSTARTCALIBRATING_BUTTON:
+        {  
+            EnableStopX = true;
+            XCalibrated = false;
+            EnableWindow(hwndButtonStopCalibratingX, TRUE);
+            break;
+        }
+        case IDC_YSTARTCALIBRATING_BUTTON:
+        {
+            EnableStopY = true;
+            YCalibrated = false;
+            EnableWindow(hwndButtonStopCalibratingY, TRUE);
+            break;
+        }
+        case IDC_XSTOPCALIBRATING_BUTTON:
+        {
+            EnableStopX = false;
+            XCalibrated = true;
+            EnableWindow(hwndButtonStopCalibratingX, FALSE);
+            break;
+        }
+        case IDC_YSTOPCALIBRATING_BUTTON:
+        {
+            EnableStopY = false;
+            YCalibrated = true;
+            EnableWindow(hwndButtonStopCalibratingY, FALSE);
+            break;
+        }
+        case IDC_STARTCALIBRATINGCENTER_BUTTON:
+        {
+            EnableStopCenter = true;
+            EnableWindow(hwndButtonStopCalibratingCenter, TRUE);
+            break;
+        }
+        case IDC_STOPCALIBRATINGCENTER_BUTTON:
+        {
+            CenterCalibrated = true;
+            EnableStopCenter = false;
+            EnableWindow(hwndButtonStopCalibratingCenter, FALSE);
+            break;
+        }
+        case IDC_STARTGAME_BUTTON:
+        {
+            int selectedIndex = SendMessage(hComboBox, CB_GETCURSEL, 0, 0);
+            if (XCalibrated && YCalibrated && CenterCalibrated && selectedIndex != -1) {
+                int textLength = GetWindowTextLength(hwndTargetsAmountTexbox) + 1;
+                /*if (textLength > 1) {
+                    wchar_t* buffer = new wchar_t[textLength];
+                    wchar_t* stopwcs;
+                    GetWindowText(hwndTargetsAmountTexbox, buffer, textLength);
+                    long l = wcstol(buffer, &stopwcs, 10);
+                    if (stopwcs[0] != '\0' || l == 0 || l >100) {
+                        MessageBox(hwndSettingsWindow, L"Not valid targets amount", L"Error", MB_ICONWARNING | MB_OK);
+                        break;
+                    }      
+                    targets_amount = l;
+                }
+                else {
+                    int res = MessageBox(hwndSettingsWindow, L"You dont fill in targets amount. It'll be set to default value", L"Error", MB_YESNO | MB_DEFBUTTON1);
+                    if (res == IDYES) {
+                        targets_amount = 0;
+                    }
+                    else {
+                        break;
+                    }
+                }*/
+                hwndGameWindow = CreateWindowEx(
+                    0,
+                    L"Game",
+                    L"Game",
+                    WS_OVERLAPPEDWINDOW & ~WS_SIZEBOX,
+                    CW_USEDEFAULT, CW_USEDEFAULT, 0, 0,
+                    NULL,
+                    NULL,
+                    (HINSTANCE)GetWindowLongPtr(hwndSettingsWindow, GWLP_HINSTANCE),
+                    NULL
+                );
+                SetResolution(resolutions[selectedIndex]);
+                /*if (targets_amount != 0) {
+                    GenerateTargets();
+                }*/
+                PlaceTargetsRandom();
+                isplaying = true;
+                ShowWindow(hwndSettingsWindow, SW_HIDE);
+                scope.setMaxXAngle(minXAngle);
+                scope.setMaxYAngle(minYAngle);
+                scope.setMinXAngle(minXAngle);
+                scope.setMinYAngle(minYAngle);
+                scope.setCenterXAngle(centerXAngle);
+                scope.setCenterYAngle(centerYAngle);
+                if (hTargetsThread != NULL) {
+                    WaitForSingleObject(hTargetsThread, INFINITE);
+                    CloseHandle(hTargetsThread);
+                    hTargetsThread = NULL;
+                }
+                RECT clientRect;
+                GetClientRect(hwndGameWindow, &clientRect);
+                scope.setWorkingAreaWidth(WINDOW_WIDTH);
+                scope.setWorkingAreaHeight(clientRect.bottom - clientRect.top);
+                scope.reset();
+                ShowWindow(hwndGameWindow, SW_SHOWNORMAL);
+                UpdateWindow(hwndGameWindow);
+            }
+            else {
+                MessageBox(hwndSettingsWindow, L"First callbrate X, Y, Center, and choose screen resolution", L"Error", MB_ICONWARNING | MB_OK);
+            }
+            break;
+        }
+        }
+        break;
     }
     }
     return DefWindowProc(hwnd, uMsg, wParam, lParam);

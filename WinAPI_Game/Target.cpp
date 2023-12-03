@@ -11,14 +11,57 @@ target::target(int section, int x, int y, int ttl)
 	this->height = this->width;
 }
 
+target::target(int section, int ttl)
+{
+	this->section = section;
+	this->ttl = ttl;	
+	this->width = 25 + (17 * (section - 1)) * 2;
+	this->height = this->width;
+}
+
 void target::setImage(Bitmap* bmp)
 {
 	this->image = bmp;
 }
 
+void target::setX(int x)
+{
+	this->x = x;
+}
+
+void target::setY(int y)
+{
+	this->y = y;
+}
+
 Bitmap* target::getImage()
 {
 	return this->image;
+}
+
+int target::getX()
+{
+	return this->x;
+}
+
+int target::getY()
+{
+	return this->y;
+}
+
+int target::getWidth()
+{
+	return this->width;
+}
+
+int target::getHeight()
+{
+	return this->height;
+}
+
+int target::getTTL()
+{
+	return this->ttl;
 }
 
 int target::getPoints(Point bullet_point)
