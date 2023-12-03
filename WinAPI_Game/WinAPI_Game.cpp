@@ -28,6 +28,7 @@ using namespace std;
 LRESULT CALLBACK Game_WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 LRESULT CALLBACK Settings_WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 int DrawComponentsSettings(HWND hwnd, HINSTANCE hInstance);
+int DrawComponentsGame(HWND hwnd, HINSTANCE hInstance);
 void InitializePhotos();
 void PlaceTargetsRandom();
 DWORD WINAPI InitilizeDefaultTargets(LPVOID lpParam);
@@ -644,6 +645,10 @@ int DrawComponentsSettings(HWND hwnd, HINSTANCE hInstance) {
         hInstance,
         NULL
     );
+    return 0;
+}
+
+int DrawComponentsGame(HWND hwnd, HINSTANCE hInstance) {
     return 0;
 }
 

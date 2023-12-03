@@ -144,6 +144,7 @@
     <ClInclude Include="Connection.h" />
     <ClInclude Include="Converter.h" />
     <ClInclude Include="framework.h" />
+    <ClInclude Include="Logger.h" />
     <ClInclude Include="Resource.h" />
     <ClInclude Include="Scope.h" />
     <ClInclude Include="Target.h" />
@@ -154,6 +155,7 @@
     <ClCompile Include="Bullet.cpp" />
     <ClCompile Include="Connection.cpp" />
     <ClCompile Include="Converter.cpp" />
+    <ClCompile Include="Logger.cpp" />
     <ClCompile Include="Scope.cpp" />
     <ClCompile Include="Target.cpp" />
     <ClCompile Include="WinAPI_Game.cpp" />
