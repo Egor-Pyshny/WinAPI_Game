@@ -338,18 +338,18 @@ void DrawScoreText(HDC hdc) {
     DrawTextW(hdc, text.c_str(), -1, &text_rect, DT_CENTER);
 }
 
-//void DrawRestartButton(HDC hdc) {
-//    //рисование кнопки относительно рабочей области а не по координатам через GetClientRect
-//    SetBkMode(hdc, TRANSPARENT);
-//    RECT restart_game = { WINDOW_WIDTH - 278,500,WINDOW_WIDTH - 20,560 };
-//    //RECT restart_game_text = { 620,555,880,580 };
-//    HBRUSH hBrush = CreateSolidBrush(RGB(181, 181, 181));
-//    FillRect(hdc, &restart_game, hBrush);
-//    DeleteObject(hBrush);
-//    const WCHAR text[] = L"Restart";
-//    int textSize = ARRAYSIZE(text);
-//    //DrawTextW(hdc, text, textSize, &restart_game_text, DT_CENTER | DT_VCENTER);
-//}
+void DrawRestartButton(HDC hdc) {
+    //рисование кнопки относительно рабочей области а не по координатам через GetClientRect
+    SetBkMode(hdc, TRANSPARENT);
+    RECT restart_game = { WINDOW_WIDTH - 280,500,WINDOW_WIDTH - 34,560 };
+    //RECT restart_game_text = { 620,555,880,580 };
+    HBRUSH hBrush = CreateSolidBrush(RGB(181, 181, 181));
+    FillRect(hdc, &restart_game, hBrush);
+    DeleteObject(hBrush);
+    const WCHAR text[] = L"Restart";
+    int textSize = ARRAYSIZE(text);
+    //DrawTextW(hdc, text, textSize, &restart_game_text, DT_CENTER | DT_VCENTER);
+}
 
 void SwitchTarget() {
     if ((current_target_number < targets.size()) && isplaying) {
@@ -385,6 +385,12 @@ void DoubleBuff(HWND hwnd) {
     hBitmap = CreateCompatibleBitmap(hdc, width, height);
     hOldBitmap = (HBITMAP)SelectObject(hdcBuffer, hBitmap);
     ReleaseDC(hwnd, hdc);
+}
+
+void ReleaseDoubleBuffer() {
+    SelectObject(hdcBuffer, hOldBitmap);
+    DeleteObject(hBitmap);
+    DeleteDC(hdcBuffer);
 }
 
 LRESULT CALLBACK Game_WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
@@ -445,13 +451,11 @@ LRESULT CALLBACK Game_WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPa
             }
             //DrawBullets(hdcBuffer);
         }
-        else {
-            //DrawRestartButton(hdcBuffer);
-        }
+        DrawRestartButton(hdcBuffer);
         DrawScope(hdcBuffer);
         BitBlt(hdc, 0, 0, ps.rcPaint.right, ps.rcPaint.bottom, hdcBuffer, 0, 0, SRCCOPY);
         EndPaint(hwnd, &ps);
-        ReleaseDC(hwnd, hdc);
+        ReleaseDoubleBuffer();
         break;
     }
     case WM_ERASEBKGND:
@@ -578,7 +582,6 @@ int DrawComponentsSettings(HWND hwnd, HINSTANCE hInstance) {
         NULL
     );
     EnableWindow(hwndButtonStopCalibratingY, FALSE);
-
     hLabelResolution = CreateWindowEx(0, L"STATIC", L"Choose window size", WS_CHILD | WS_VISIBLE, 100, 250, 200, 20, hwnd, NULL, NULL, NULL);
     
     hComboBox = CreateWindowEx(
@@ -778,7 +781,7 @@ LRESULT CALLBACK Settings_WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM
                 }*/
                 PlaceTargetsRandom();
                 isplaying = true;
-                //ShowWindow(hwndSettingsWindow, SW_HIDE);
+                ShowWindow(hwndSettingsWindow, SW_HIDE);
                 scope.setMaxXAngle(minXAngle);
                 scope.setMaxYAngle(minYAngle);
                 scope.setMinXAngle(minXAngle);
