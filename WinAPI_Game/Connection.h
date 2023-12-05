@@ -3,9 +3,11 @@
 #pragma comment(lib, "ws2_32.lib")
 #include <Winsock2.h>
 #include <WS2tcpip.h>
-#include <string>
+#include <queue>
 #include <iostream>
 #include <Windows.h>
+
+using namespace std;
 
 class Connection
 {
@@ -19,6 +21,7 @@ protected:
 private:
 	const char* serverAddress_;
 	int serverPort_;
+	queue<POINTFLOAT> points;
 	WSADATA wsaData_;
 	SOCKET clientSocket_;
 	sockaddr_in serverAddressInfo_;

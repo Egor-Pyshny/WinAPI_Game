@@ -10,11 +10,18 @@ class Logger
 {
 public:
 	Logger(string logger_type);
-	void logAngles(POINTFLOAT p);
-	void logCoordinates(POINT p);
+	~Logger();
+	DWORD WINAPI logAngles(LPVOID lpParam);
+	DWORD WINAPI logCoordinates(LPVOID lpParam);
+	DWORD WINAPI logGameInfo(LPVOID lpParam);
 private:
+	bool started = false;
+	bool log = false;
+	HANDLE hLoggerThread;
 	ofstream stream;
 	const string angles_file = "";
 	const string coordinates_file = "";
+	const string gameinfo_file = "";
+	string logger_type;
 };
 

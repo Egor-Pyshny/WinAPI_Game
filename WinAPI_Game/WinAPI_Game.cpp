@@ -48,13 +48,14 @@ HWND hwndButtonStopCalibratingCenter;
 HWND hwndButtonStartGame;
 HWND hwndButtonSettigs;
 HWND hwndButtonRestartGame;
-HWND hComboBox;
+HWND hwndComboBox;
 HWND hwndXTexbox;
 HWND hwndYTexbox;
 HWND hwndTargetsAmountTexbox;
 HWND hwndGameWindow;
 HWND hwndSettingsWindow;
 HANDLE hTargetsThread;
+HANDLE hDataThread;
 HFONT hTextBoxFont;
 Bitmap* imageList[target::types];
 Bullet bullets[MAX_BULLETS];
@@ -146,8 +147,8 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
     ShowWindow(hwndSettingsWindow, nCmdShow);
     UpdateWindow(hwndSettingsWindow);
     MSG msg;
-    HANDLE data_thread = CreateThread(nullptr, 0, GetData, NULL, 0, nullptr);
-    if (data_thread == NULL) {
+    hDataThread = CreateThread(nullptr, 0, GetData, NULL, 0, nullptr);
+    if (hDataThread == NULL) {
         return 1;
     }
     while (GetMessage(&msg, NULL, 0, 0)) {
@@ -155,7 +156,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
         DispatchMessage(&msg);
     }
     GdiplusShutdown(gdiplusToken);
-    CloseHandle(data_thread);
+    CloseHandle(hDataThread);
     return (int)msg.wParam;
 }
 
@@ -231,35 +232,40 @@ DWORD WINAPI GetData(LPVOID lpParam) {
     //const char* ipAddressStr = "192.168.150.2";
     //POINTFLOAT radianPoint;
     //Connection network(ipAddressStr,9998);
-    //network.Connect();
-    //while (true)
-    //{
-    //    if (network.NextXY(radianPoint))
+    //bool connected = network.Connect();
+    //if(connected){
+    //    while (true)
     //    {
-    //        currentAngles = { radianPoint.x * 180/(float)M_PI , radianPoint.y * 180 / (float)M_PI };
-    //        if (CenterCalibrated) {
-    //            currentAngles.x -= centerXAngle;
-    //            currentAngles.y -= centerYAngle;
-    //        }
-    //        /*if (isplaying) {
-    //            scope_x -= currentAngles.x;
-    //            scope_y -= currentAngles.y;
-    //        }*/
-    //        if (EnableStopX) {
-    //            minXAngle = currentAngles.x;
-    //            std::wstring floatString = std::to_wstring(minXAngle);
-    //            SetWindowText(hwndXTexbox, floatString.c_str());
-    //        } 
-    //        if (EnableStopY) {
-    //            minYAngle = currentAngles.y;
-    //            std::wstring floatString = std::to_wstring(minYAngle);
-    //            SetWindowText(hwndYTexbox, floatString.c_str());
-    //        } 
-    //        if (EnableStopCenter) {
-    //            centerYAngle = currentAngles.y;
-    //            centerXAngle = currentAngles.x;
+    //        if (network.NextXY(radianPoint))
+    //        {
+    //            currentAngles = { radianPoint.x * 180/(float)M_PI , radianPoint.y * 180 / (float)M_PI };
+    //            if (CenterCalibrated) {
+    //                currentAngles.x -= centerXAngle;
+    //                currentAngles.y -= centerYAngle;
+    //            }
+    //            /*if (isplaying) {
+    //                scope_x -= currentAngles.x;
+    //                scope_y -= currentAngles.y;
+    //            }*/
+    //            if (EnableStopX) {
+    //                minXAngle = currentAngles.x;
+    //                std::wstring floatString = std::to_wstring(minXAngle);
+    //                SetWindowText(hwndXTexbox, floatString.c_str());
+    //            } 
+    //            if (EnableStopY) {
+    //                minYAngle = currentAngles.y;
+    //                std::wstring floatString = std::to_wstring(minYAngle);
+    //                SetWindowText(hwndYTexbox, floatString.c_str());
+    //            } 
+    //            if (EnableStopCenter) {
+    //                centerYAngle = currentAngles.y;
+    //                centerXAngle = currentAngles.x;
+    //            }
     //        }
     //    }
+    //}
+    //else { 
+    //    return 1; 
     //}
     return 0;
 }
@@ -585,7 +591,7 @@ int DrawComponentsSettings(HWND hwnd, HINSTANCE hInstance) {
     EnableWindow(hwndButtonStopCalibratingY, FALSE);
     hLabelResolution = CreateWindowEx(0, L"STATIC", L"Choose window size", WS_CHILD | WS_VISIBLE, 100, 250, 200, 20, hwnd, NULL, NULL, NULL);
     
-    hComboBox = CreateWindowEx(
+    hwndComboBox = CreateWindowEx(
         0,
         L"ComboBox",
         NULL,
@@ -597,7 +603,7 @@ int DrawComponentsSettings(HWND hwnd, HINSTANCE hInstance) {
         NULL
     );
     for (const wchar_t* resolution : resolutions) {
-        SendMessage(hComboBox, CB_ADDSTRING, 0, (LPARAM)resolution);
+        SendMessage(hwndComboBox, CB_ADDSTRING, 0, (LPARAM)resolution);
     }
 
     hwndButtonStartCalibratingCenter = CreateWindow(
@@ -746,7 +752,7 @@ LRESULT CALLBACK Settings_WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM
         }
         case IDC_STARTGAME_BUTTON:
         {
-            int selectedIndex = SendMessage(hComboBox, CB_GETCURSEL, 0, 0);
+            int selectedIndex = SendMessage(hwndComboBox, CB_GETCURSEL, 0, 0);
             if (XCalibrated && YCalibrated && CenterCalibrated && selectedIndex != -1) {
                 int textLength = GetWindowTextLength(hwndTargetsAmountTexbox) + 1;
                 /*if (textLength > 1) {

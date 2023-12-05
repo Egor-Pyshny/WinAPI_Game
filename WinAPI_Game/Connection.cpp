@@ -14,7 +14,6 @@ Connection::~Connection()
 	{
 		closesocket(clientSocket_);
 	}
-
 	WSACleanup();
 }
 
@@ -64,6 +63,7 @@ bool Connection::NextXY(POINTFLOAT& point)
 	if (GetCoord(x) && GetCoord(y) && GetCoord(z))
 	{
 		point = { x, y };
+		points.push(point);
 		return true;
 	}
 	return false;
