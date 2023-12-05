@@ -1,8 +1,9 @@
 #include "Logger.h"
 
-Logger::Logger(int logger_type)
+Logger::Logger(int logger_type, int game_id)
 {
 	this->logger_type = logger_type;
+	this->game_id = game_id;
 }
 
 Logger::~Logger()
@@ -13,11 +14,6 @@ Logger::~Logger()
 	}
 }
 
-void Logger::changeType(int logger_type)
-{
-	this->logger_type = logger_type;
-}
-
 bool Logger::start(LPVOID lpParam)
 {
 	started = true;
@@ -25,17 +21,17 @@ bool Logger::start(LPVOID lpParam)
 		switch (this->logger_type) {
 		case ANGLES:
 		{
-			hLoggerThread = CreateThread(nullptr, 0, logAngles, lpParam, 0, nullptr);;
+			
 			break;
 		}
 		case COORDS:
 		{
-			hLoggerThread = CreateThread(nullptr, 0, logCoordinates, lpParam, 0, nullptr);;
+			
 			break;
 		}
 		case GAMEINFO:
 		{
-			hLoggerThread = CreateThread(nullptr, 0, logGameInfo, lpParam, 0, nullptr);;
+			
 			break;
 		}
 		default:
@@ -44,6 +40,7 @@ bool Logger::start(LPVOID lpParam)
 			return false;
 		}
 		}
+		hLoggerThread = CreateThread(nullptr, 0, loging, lpParam, 0, nullptr);;
 		if (hLoggerThread == NULL) {
 			return false;
 		}
@@ -57,34 +54,18 @@ void Logger::stop()
 	this->log = false;
 }
 
-DWORD WINAPI logAngles(LPVOID lpParam)
+DWORD WINAPI loging(LPVOID lpParam)
 {
-	ofstream stream("");
+	info* inf = (info*)lpParam;
+	switch (inf->type)
+	{
+
+	default:
+		break;
+	}
 	while (started) {
 		if (log) {
 		
-		}
-	}
-	return 0;
-}
-
-DWORD WINAPI logCoordinates(LPVOID lpParam)
-{
-	ofstream stream("");
-	while (started) {
-		if (log) {
-
-		}
-	}
-	return 0;
-}
-
-DWORD WINAPI logGameInfo(LPVOID lpParam)
-{
-	ofstream stream("");
-	while (started) {
-		if (log) {
-
 		}
 	}
 	return 0;

@@ -6,23 +6,33 @@
 
 #include <string>
 #include <fstream>
+#include <queue>
 #include <windows.h>
+#include "Target.h"
 
 using namespace std;
 
-DWORD WINAPI logAngles(LPVOID lpParam);
-DWORD WINAPI logCoordinates(LPVOID lpParam);
-DWORD WINAPI logGameInfo(LPVOID lpParam);
+
+
+typedef struct _info {
+	Logger* instance;
+	int type;
+	union _queues {
+		queue<POINT>* coords_queue;
+		queue<POINTFLOAT>* angles_queue;
+		queue<target>* targets_queue;
+	} queues;
+} info;
+
+DWORD WINAPI loging(LPVOID lpParam);
 
 class Logger
 {
 public:
-	Logger(int logger_type);
+	Logger(int logger_type, int game_id);
 	~Logger();
-	void changeType(int logger_type);
 	bool start(LPVOID lpParam);
 	void stop();
-
 private:
 	bool started = false;
 	bool first_start = true;
@@ -30,6 +40,7 @@ private:
 	HANDLE hLoggerThread = NULL;
 	ofstream stream;
 	int logger_type;
+	int game_id;
 	const string angles_file = "";
 	const string coordinates_file = "";
 	const string gameinfo_file = "";
