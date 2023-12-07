@@ -13,7 +13,7 @@
 
 using namespace std;
 
-struct _info {
+typedef struct _info {
 	Logger* instance;
 	union _queues {
 		queue<POINT>* coords_queue;
