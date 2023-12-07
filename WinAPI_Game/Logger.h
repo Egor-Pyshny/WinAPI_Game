@@ -2,21 +2,19 @@
 
 #define ANGLES 1
 #define COORDS 2
-#define GAMEINFO 3
+#define TARGETS 3
 
 #include <string>
 #include <fstream>
 #include <queue>
 #include <windows.h>
+#include <format>
 #include "Target.h"
 
 using namespace std;
 
-
-
-typedef struct _info {
+struct _info {
 	Logger* instance;
-	int type;
 	union _queues {
 		queue<POINT>* coords_queue;
 		queue<POINTFLOAT>* angles_queue;
@@ -24,7 +22,9 @@ typedef struct _info {
 	} queues;
 } info;
 
-DWORD WINAPI loging(LPVOID lpParam);
+DWORD WINAPI logingAngles(LPVOID lpParam);
+DWORD WINAPI logingCoords(LPVOID lpParam);
+DWORD WINAPI logingTargets(LPVOID lpParam);
 
 class Logger
 {
@@ -44,5 +44,8 @@ private:
 	const string angles_file = "";
 	const string coordinates_file = "";
 	const string gameinfo_file = "";
+	friend DWORD WINAPI logingAngles(LPVOID lpParam);
+	friend DWORD WINAPI logingCoords(LPVOID lpParam);
+	friend DWORD WINAPI logingTargets(LPVOID lpParam);
 };
 
