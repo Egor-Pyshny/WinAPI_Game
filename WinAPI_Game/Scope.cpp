@@ -103,7 +103,8 @@ void Scope::move_by_angles(float x, float y)
     if (this->y > 575) this->y = 575;
     if (this->x > 575) this->x = 575;
     if (this->x < 0) this->x = 0;
-    this->points.push(POINT(this->x, this->y));
+    POINT p(this->x, this->y);
+    this->points.push(p);
 }
 
 void Scope::move_by_angles(POINTFLOAT p)
@@ -211,5 +212,7 @@ bool Scope::move_by_keys(WPARAM wparam) {
     default:
         return false;
     }
+    POINT p(this->x, this->y);
+    this->points.push(p);
     return true;
 }

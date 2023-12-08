@@ -3,9 +3,9 @@
 #define ANGLES 1
 #define COORDS 2
 #define TARGETS 3
-#define ANGLESFILE ""
-#define COORDINATESFILE ""
-#define TARGETSFILE ""
+#define ANGLESFILE "./log/angles.txt"
+#define COORDINATESFILE "./log/coords.txt"
+#define TARGETSFILE "./log/targets.txt"
 
 #include <string>
 #include <fstream>
