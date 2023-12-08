@@ -2,6 +2,8 @@
 
 #include <windows.h>
 #include <cmath>
+#include <queue>
+#include "Logger.h"
 
 class Scope
 {
@@ -12,6 +14,7 @@ public:
 	void reset();
 	int getX();
 	int getY();
+	void setLogger(Logger* log);
 	void setX(int x);
 	void setY(int y);
 	void setWorkingAreaWidth(int working_area_width);
@@ -23,6 +26,8 @@ public:
 	void setCenterXAngle(float centerXAngle);
 	void setCenterYAngle(float centerYAngle);
 private:
+	std::queue<POINT> points;
+	Logger* log;
 	const int step = 10;
 	const int max = 17;
 	float fault = 0.07;

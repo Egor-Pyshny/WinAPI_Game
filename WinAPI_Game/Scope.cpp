@@ -15,6 +15,12 @@ int Scope::getY()
     return this->y;
 }
 
+void Scope::setLogger(Logger* log)
+{
+    this->log = log;
+    log->queues.coords_queue = &(this->points);
+}
+
 void Scope::setX(int x)
 {
     this->x = x;
@@ -97,6 +103,7 @@ void Scope::move_by_angles(float x, float y)
     if (this->y > 575) this->y = 575;
     if (this->x > 575) this->x = 575;
     if (this->x < 0) this->x = 0;
+    this->points.push(POINT(this->x, this->y));
 }
 
 void Scope::move_by_angles(POINTFLOAT p)

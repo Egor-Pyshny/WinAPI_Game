@@ -19,6 +19,7 @@ public:
 	int getWidth();
 	int getHeight();
 	int getTTL();
+	int getSections();
 	int getPoints(Point bullet_point);
 	static const int types = 3;
 private:

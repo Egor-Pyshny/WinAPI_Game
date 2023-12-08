@@ -11,6 +11,7 @@
 #include <vector>
 #include "Resource.h"
 #include "Scope.h"
+#include "Logger.h"
 #include "Target.h"
 #include <queue>
 #include "Bullet.h"
@@ -31,6 +32,9 @@ int DrawComponentsSettings(HWND hwnd, HINSTANCE hInstance);
 int DrawComponentsGame(HWND hwnd, HINSTANCE hInstance);
 void InitializePhotos();
 void PlaceTargetsRandom();
+unsigned long long GetValue(HKEY hKey);
+void SetNewValue(HKEY hKey, DWORDLONG data);
+HKEY OpenOrCreateKey(HKEY section, LPCSTR keyPath);
 DWORD WINAPI InitilizeDefaultTargets(LPVOID lpParam);
 DWORD WINAPI GetData(LPVOID lpParam);
 
@@ -68,6 +72,11 @@ vector<target> targets;
 target* current_target = NULL;
 queue<Point> points;
 POINTFLOAT currentAngles;
+Logger* logger_angles;
+Logger* logger_coords;
+Logger* logger_targets;
+HKEY hkey;
+unsigned long long game_id;
 bool EnableStopX = false;
 bool EnableStopY = false;
 bool EnableStopCenter = false;
@@ -142,7 +151,19 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
     wc_game.style = CS_HREDRAW | CS_VREDRAW;
     wc_game.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
     RegisterClass(&wc_game);
-
+    hkey = OpenOrCreateKey(HKEY_LOCAL_MACHINE, "SOFTWARE\\MyCompany\\MyApp");
+    DWORDLONG id = GetValue(hkey);
+    if (id == -1) {
+        SetNewValue(hkey, 0);
+        game_id = 0;
+    }
+    else {
+        game_id = id;
+    }
+    logger_angles = new Logger(ANGLES, game_id);
+    logger_coords = new Logger(COORDS, game_id);
+    logger_targets = new Logger(TARGETS, game_id);
+    scope.setLogger(logger_coords);
     DrawComponentsSettings(hwndSettingsWindow, hInstance);
     ShowWindow(hwndSettingsWindow, nCmdShow);
     UpdateWindow(hwndSettingsWindow);
@@ -171,6 +192,44 @@ DWORD WINAPI InitilizeDefaultTargets(LPVOID lpParam) {
     //t1.setImage(imageList[3 - 3]);
     //targets.push_back(t1);
     return 0;
+}
+
+HKEY OpenOrCreateKey(HKEY section, LPCSTR keyPath) {
+    HKEY hKey;
+    DWORD res;
+    if (RegCreateKeyExA(section, keyPath, 0, NULL, REG_OPTION_NON_VOLATILE, KEY_WRITE | KEY_READ, NULL, &hKey, &res) == ERROR_SUCCESS) {
+        if (res == REG_CREATED_NEW_KEY) {
+            cout << "Key created" << endl;
+        }
+        else if (res == REG_OPENED_EXISTING_KEY) {
+            cout << "Key is already created" << endl;
+        }
+    }
+    else {
+        return NULL;
+    }
+    return hKey;
+}
+
+unsigned long long GetValue(HKEY hKey) {
+    DWORDLONG data;
+    DWORD dataSize = sizeof(data);
+    DWORD dataType;
+    if (RegQueryValueEx(hKey, L"GAMEID", nullptr, &dataType, (BYTE*)(&data), &dataSize) == ERROR_SUCCESS) {
+        if (dataType == REG_QWORD) {
+            return data;
+        }
+    }
+    return -1;
+}
+
+void SetNewValue(HKEY hKey, DWORDLONG data) {
+    if (RegSetValueExW(hKey, L"GAMEID", 0, REG_QWORD, (BYTE*)(&data), sizeof(data)) == ERROR_SUCCESS) {
+        cout << "Data is recorded" << endl;
+    }
+    else {
+        cout << "Error" << endl;
+    }
 }
 
 void PlaceTargetsRandom(){
@@ -210,6 +269,7 @@ void PlaceTargetsRandom(){
         prev_target_width = target_width;
         prev_target_height = target_height;
     }
+    logger_targets->queues.targets_queue = &targets;
 }
 
 void GenerateTargets() {
@@ -232,6 +292,7 @@ DWORD WINAPI GetData(LPVOID lpParam) {
     //const char* ipAddressStr = "192.168.150.2";
     //POINTFLOAT radianPoint;
     //Connection network(ipAddressStr,9998);
+    //network.setLogger(logger_angles);
     //bool connected = network.Connect();
     //if(connected){
     //    while (true)
@@ -366,6 +427,9 @@ void SwitchTarget() {
     }
     else {
         KillTimer(hwndGameWindow, IDC_DRAWTIMER_ID);
+        logger_angles->finish();
+        logger_coords->finish();
+        logger_targets->finish();
         isplaying = false;        
     }
 }
@@ -405,6 +469,9 @@ LRESULT CALLBACK Game_WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPa
     switch (uMsg)
     {
     case WM_DESTROY: {
+        logger_angles->finish();
+        logger_coords->finish();
+        logger_targets->finish();
         ShowWindow(hwndSettingsWindow, SW_SHOWNORMAL);
         KillTimer(hwnd, IDC_FPSTIMER_ID);
         KillTimer(hwnd, IDC_DRAWTIMER_ID);
@@ -475,6 +542,9 @@ LRESULT CALLBACK Game_WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPa
             int yPos = GET_Y_LPARAM(lParam);
             if ((xPos >= 620 && xPos <= 720) &&
                 (yPos >= 550 && yPos <= 580)) {
+                logger_angles->start();
+                logger_coords->start();
+                logger_targets->start();
                 RestartGame(hwnd);
             }
         }
@@ -809,6 +879,9 @@ LRESULT CALLBACK Settings_WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM
                 scope.setWorkingAreaWidth(WINDOW_WIDTH);
                 scope.setWorkingAreaHeight(clientRect.bottom - clientRect.top);
                 scope.reset();
+                logger_angles->start();
+                logger_coords->start();
+                logger_targets->start();
                 ShowWindow(hwndGameWindow, SW_SHOWNORMAL);
                 UpdateWindow(hwndGameWindow);
             }

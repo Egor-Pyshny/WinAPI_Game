@@ -64,6 +64,11 @@ int target::getTTL()
 	return this->ttl;
 }
 
+int target::getSections()
+{
+	return this->section;
+}
+
 int target::getPoints(Point bullet_point)
 {
 	Point c = this->getCenter();

@@ -3,6 +3,9 @@
 #define ANGLES 1
 #define COORDS 2
 #define TARGETS 3
+#define ANGLESFILE ""
+#define COORDINATESFILE ""
+#define TARGETSFILE ""
 
 #include <string>
 #include <fstream>
@@ -13,15 +16,6 @@
 
 using namespace std;
 
-typedef struct _info {
-	Logger* instance;
-	union _queues {
-		queue<POINT>* coords_queue;
-		queue<POINTFLOAT>* angles_queue;
-		queue<target>* targets_queue;
-	} queues;
-} info;
-
 DWORD WINAPI logingAngles(LPVOID lpParam);
 DWORD WINAPI logingCoords(LPVOID lpParam);
 DWORD WINAPI logingTargets(LPVOID lpParam);
@@ -29,10 +23,16 @@ DWORD WINAPI logingTargets(LPVOID lpParam);
 class Logger
 {
 public:
-	Logger(int logger_type, int game_id);
+	Logger(int logger_type, DWORDLONG game_id);
 	~Logger();
-	bool start(LPVOID lpParam);
-	void stop();
+	bool start();
+	void finish();
+	void stop();	
+	union _queues {
+		queue<POINT>* coords_queue;
+		queue<POINTFLOAT>* angles_queue;
+		vector<target>* targets_queue;
+	} queues;
 private:
 	bool started = false;
 	bool first_start = true;
@@ -40,10 +40,8 @@ private:
 	HANDLE hLoggerThread = NULL;
 	ofstream stream;
 	int logger_type;
-	int game_id;
-	const string angles_file = "";
-	const string coordinates_file = "";
-	const string gameinfo_file = "";
+	DWORDLONG game_id;
+
 	friend DWORD WINAPI logingAngles(LPVOID lpParam);
 	friend DWORD WINAPI logingCoords(LPVOID lpParam);
 	friend DWORD WINAPI logingTargets(LPVOID lpParam);

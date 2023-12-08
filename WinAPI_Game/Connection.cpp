@@ -17,6 +17,12 @@ Connection::~Connection()
 	WSACleanup();
 }
 
+void Connection::setLogger(Logger* log)
+{
+	this->log = log;
+	log->queues.angles_queue = &(this->points);
+}
+
 bool Connection::Connect()
 {
 	CHAR receivedByte;
@@ -63,7 +69,7 @@ bool Connection::NextXY(POINTFLOAT& point)
 	if (GetCoord(x) && GetCoord(y) && GetCoord(z))
 	{
 		point = { x, y };
-		points.push(point);
+		this->points.push(point);
 		return true;
 	}
 	return false;

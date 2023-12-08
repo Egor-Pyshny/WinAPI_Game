@@ -6,6 +6,7 @@
 #include <queue>
 #include <iostream>
 #include <Windows.h>
+#include "Logger.h"
 
 using namespace std;
 
@@ -14,6 +15,7 @@ class Connection
 public:
 	Connection(const char* serverAddress, int serverPort);
 	~Connection();
+	void setLogger(Logger* log);
 	bool Connect();
 	bool NextXY(POINTFLOAT& point);
 protected:
@@ -21,6 +23,7 @@ protected:
 private:
 	const char* serverAddress_;
 	int serverPort_;
+	Logger* log;
 	queue<POINTFLOAT> points;
 	WSADATA wsaData_;
 	SOCKET clientSocket_;
