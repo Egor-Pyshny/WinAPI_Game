@@ -56,6 +56,11 @@ void Logger::stop()
 	this->log = false;
 }
 
+void Logger::setGameId(DWORDLONG game_id)
+{
+	this->game_id = game_id;
+}
+
 void Logger::finish()
 {
 	if (this->started) {

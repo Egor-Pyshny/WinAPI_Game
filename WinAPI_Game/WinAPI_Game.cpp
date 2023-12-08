@@ -472,6 +472,7 @@ LRESULT CALLBACK Game_WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPa
         logger_angles->finish();
         logger_coords->finish();
         logger_targets->finish();
+        //выставить новый game_id после finish
         ShowWindow(hwndSettingsWindow, SW_SHOWNORMAL);
         KillTimer(hwnd, IDC_FPSTIMER_ID);
         KillTimer(hwnd, IDC_DRAWTIMER_ID);
@@ -545,6 +546,8 @@ LRESULT CALLBACK Game_WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPa
                 logger_angles->start();
                 logger_coords->start();
                 logger_targets->start();
+                game_id++;
+                SetNewValue(hkey, game_id);
                 RestartGame(hwnd);
             }
         }
@@ -882,6 +885,8 @@ LRESULT CALLBACK Settings_WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM
                 logger_angles->start();
                 logger_coords->start();
                 logger_targets->start();
+                game_id++;
+                SetNewValue(hkey, game_id);
                 ShowWindow(hwndGameWindow, SW_SHOWNORMAL);
                 UpdateWindow(hwndGameWindow);
             }

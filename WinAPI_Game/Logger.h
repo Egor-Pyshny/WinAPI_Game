@@ -28,6 +28,7 @@ public:
 	bool start();
 	void finish();
 	void stop();	
+	void setGameId(DWORDLONG game_id);
 	union _queues {
 		queue<POINT>* coords_queue;
 		queue<POINTFLOAT>* angles_queue;
