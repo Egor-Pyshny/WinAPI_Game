@@ -430,6 +430,9 @@ void SwitchTarget() {
         logger_angles->finish();
         logger_coords->finish();
         logger_targets->finish();
+        logger_angles->setGameId(game_id);
+        logger_coords->setGameId(game_id);
+        logger_targets->setGameId(game_id);
         isplaying = false;        
     }
 }
@@ -472,6 +475,9 @@ LRESULT CALLBACK Game_WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPa
         logger_angles->finish();
         logger_coords->finish();
         logger_targets->finish();
+        logger_angles->setGameId(game_id);
+        logger_coords->setGameId(game_id);
+        logger_targets->setGameId(game_id);
         //выставить новый game_id после finish
         ShowWindow(hwndSettingsWindow, SW_SHOWNORMAL);
         KillTimer(hwnd, IDC_FPSTIMER_ID);
