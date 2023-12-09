@@ -9,7 +9,6 @@ class Scope
 {
 public:
 	bool move_by_keys(WPARAM wparam);
-	void move_by_angles(float x, float y);
 	void move_by_angles(POINTFLOAT p);
 	void reset();
 	int getX();
@@ -17,6 +16,7 @@ public:
 	void setLogger(Logger* log);
 	void setX(int x);
 	void setY(int y);
+	void setStep(int step);
 	void setWorkingAreaWidth(int working_area_width);
 	void setWorkingAreaHeight(int working_area_height);
 	void setXAngle(float maxXAngle);
@@ -26,8 +26,7 @@ public:
 private:
 	std::queue<POINT> points;
 	Logger* log;
-	const int step = 10;
-	const int max = 17;
+	int step = 10;
 	float fault = 0.07;
 	float XAngle = 0;
 	float YAngle = 0;

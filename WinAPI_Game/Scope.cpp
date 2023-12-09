@@ -31,6 +31,11 @@ void Scope::setY(int y)
     this->y = y;
 }
 
+void Scope::setStep(int step)
+{
+    this->step = step;
+}
+
 void Scope::setWorkingAreaWidth(int working_area_width)
 {
     this->working_area_width = working_area_width;
@@ -83,18 +88,6 @@ void Scope::move_left()
 {
     this->x -= step;
     if (this->x < 0) this->x = 0;
-}
-
-void Scope::move_by_angles(float x, float y)
-{
-    this->x += step * (x / max);
-    this->y += step * (y / max);
-    if (this->y < 0) this->y = 0;
-    if (this->y > 575) this->y = 575;
-    if (this->x > 575) this->x = 575;
-    if (this->x < 0) this->x = 0;
-    POINT p(this->x, this->y);
-    this->points.push(p);
 }
 
 void Scope::move_by_angles(POINTFLOAT p)

@@ -2,9 +2,11 @@
 #define UNICODE
 #endif 
 #define _USE_MATH_DEFINES
+#define MAX_SENSITIVITY 25
+#define MIN_SENSITIVITY 7
 
-#pragma comment(lib, "ws2_32.lib")
 #include <WS2tcpip.h>
+#include <CommCtrl.h>
 #include <Windows.h>
 #include <string>
 #include <gdiplus.h>
@@ -23,6 +25,8 @@
 #include "Connection.h"
 #include "Converter.h"
 
+#pragma comment(lib, "ws2_32.lib")
+#pragma comment(lib, "Comctl32.lib")
 using namespace Gdiplus;
 using namespace std;
 
@@ -39,10 +43,12 @@ DWORD WINAPI InitilizeDefaultTargets(LPVOID lpParam);
 DWORD WINAPI GetData(LPVOID lpParam);
 
 vector<int> v;
-HWND hLabelX;
-HWND hLabelY;
-HWND hLabelTargetsAmount;
-HWND hLabelResolution;
+HWND hwndLabelX;
+HWND hwndLabelY;
+HWND hwndLabelSensitivity;
+HWND hwndTrackBarSensitivity;
+HWND hwndLabelTargetsAmount;
+HWND hwndLabelResolution;
 HWND hwndButtonStartCalibratingX;
 HWND hwndButtonStopCalibratingX;
 HWND hwndButtonStartCalibratingY;
@@ -97,6 +103,7 @@ float YAngle = 0;
 float centerXAngle = 0;
 float centerYAngle = 0;
 int fps = 0;
+int sensitivity = MIN_SENSITIVITY;
 
 int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine, int nCmdShow)
 {
@@ -130,7 +137,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
     {
         return 1;
     }
-    RECT newClientRect = { 0, 0, 400, 450 };
+    RECT newClientRect = { 0, 0, 400, 510 };
     AdjustWindowRect(&newClientRect, WS_OVERLAPPEDWINDOW, FALSE);
     SetWindowPos(
         hwndSettingsWindow,
@@ -597,7 +604,7 @@ LRESULT CALLBACK Game_WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPa
 }
 
 int DrawComponentsSettings(HWND hwnd, HINSTANCE hInstance) {
-    hLabelX = CreateWindowEx(0, L"STATIC", L"Colibrating X", WS_CHILD | WS_VISIBLE, 100, 10, 200, 20, hwnd, NULL, NULL, NULL);
+    hwndLabelX = CreateWindowEx(0, L"STATIC", L"Colibrating X", WS_CHILD | WS_VISIBLE, 100, 10, 200, 20, hwnd, NULL, NULL, NULL);
     
     hwndXTexbox = CreateWindow(
         L"EDIT",
@@ -633,7 +640,7 @@ int DrawComponentsSettings(HWND hwnd, HINSTANCE hInstance) {
     );
     EnableWindow(hwndButtonStopCalibratingX, FALSE);
 
-    hLabelY = CreateWindowEx(0, L"STATIC", L"Calibrating Y", WS_CHILD | WS_VISIBLE, 100, 130, 200, 20, hwnd, NULL, NULL, NULL);
+    hwndLabelY = CreateWindowEx(0, L"STATIC", L"Calibrating Y", WS_CHILD | WS_VISIBLE, 100, 130, 200, 20, hwnd, NULL, NULL, NULL);
     
     hwndYTexbox = CreateWindow(
         L"EDIT",
@@ -668,7 +675,7 @@ int DrawComponentsSettings(HWND hwnd, HINSTANCE hInstance) {
         NULL
     );
     EnableWindow(hwndButtonStopCalibratingY, FALSE);
-    hLabelResolution = CreateWindowEx(0, L"STATIC", L"Choose window size", WS_CHILD | WS_VISIBLE, 100, 250, 200, 20, hwnd, NULL, NULL, NULL);
+    hwndLabelResolution = CreateWindowEx(0, L"STATIC", L"Choose window size", WS_CHILD | WS_VISIBLE, 100, 250, 200, 20, hwnd, NULL, NULL, NULL);
     
     hwndComboBox = CreateWindowEx(
         0,
@@ -707,7 +714,7 @@ int DrawComponentsSettings(HWND hwnd, HINSTANCE hInstance) {
     );
     EnableWindow(hwndButtonStopCalibratingCenter, FALSE);
 
-    hLabelTargetsAmount = CreateWindowEx(0, L"STATIC", L"Targets amount:", WS_CHILD | WS_VISIBLE, 100, 360, 200, 20, hwnd, NULL, NULL, NULL);
+    hwndLabelTargetsAmount = CreateWindowEx(0, L"STATIC", L"Targets amount:", WS_CHILD | WS_VISIBLE, 100, 360, 200, 20, hwnd, NULL, NULL, NULL);
     
     hwndTargetsAmountTexbox = CreateWindow(
         L"EDIT",
@@ -720,11 +727,31 @@ int DrawComponentsSettings(HWND hwnd, HINSTANCE hInstance) {
         NULL
     );
 
+    hwndTrackBarSensitivity = CreateWindowEx(
+        NULL, 
+        TRACKBAR_CLASS, 
+        NULL,
+        WS_CHILD | WS_VISIBLE | TBS_HORZ | TBS_AUTOTICKS,
+        100, 410, 200, 30,
+        hwnd, 
+        (HMENU)IDC_SENSITIVITY_TRACKBAR, 
+        hInstance,
+        NULL
+    );
+    SendMessage(hwndTrackBarSensitivity, TBM_SETRANGE, TRUE, MAKELPARAM(MIN_SENSITIVITY, MAX_SENSITIVITY));
+    SendMessage(hwndTrackBarSensitivity, TBM_SETPAGESIZE, 0, 1);
+    SendMessage(hwndTrackBarSensitivity, TBM_SETTICFREQ, 1, 0);
+    SendMessage(hwndTrackBarSensitivity, TBM_SETTIC, 0, 0);
+    wchar_t buffer[20];
+    wsprintf(buffer, L"Sensitivity = %d", sensitivity);
+
+    hwndLabelSensitivity = CreateWindowEx(0, L"STATIC", buffer, WS_CHILD | WS_VISIBLE, 100, 445, 200, 20, hwnd, NULL, NULL, NULL);
+
     hwndButtonStartGame = CreateWindow(
         L"BUTTON",
         L"Start game",
         WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON | BS_MULTILINE,
-        100, 410, 200, 30,
+        100, 470, 200, 30,
         hwnd,
         (HMENU)IDC_STARTGAME_BUTTON,
         hInstance,
@@ -799,10 +826,18 @@ LRESULT CALLBACK Settings_WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM
     }
     case WM_CTLCOLORSTATIC:
     {
-        if ((HWND)lParam == hLabelX || (HWND)lParam == hLabelY || (HWND)lParam == hLabelResolution || (HWND)lParam == hLabelTargetsAmount)
+        if ((HWND)lParam == hwndLabelX || (HWND)lParam == hwndLabelY || (HWND)lParam == hwndLabelResolution || (HWND)lParam == hwndLabelTargetsAmount || (HWND)lParam == hwndLabelSensitivity)
         {
             return (LRESULT)CreateSolidBrush(RGB(255, 255, 255));
         }
+        break;
+    }
+    case WM_HSCROLL: 
+    {
+        sensitivity = SendMessage(hwndTrackBarSensitivity, TBM_GETPOS, 0, 0);
+        wchar_t buffer[20];
+        wsprintf(buffer, L"Sensitivity = %d", sensitivity);
+        SetWindowTextW(hwndLabelSensitivity, buffer);
         break;
     }
     case WM_COMMAND:
@@ -897,6 +932,7 @@ LRESULT CALLBACK Settings_WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM
                 scope.setYAngle(YAngle);
                 scope.setCenterXAngle(centerXAngle);
                 scope.setCenterYAngle(centerYAngle);
+                scope.setStep(sensitivity);
                 if (hTargetsThread != NULL) {
                     WaitForSingleObject(hTargetsThread, INFINITE);
                     CloseHandle(hTargetsThread);
