@@ -72,26 +72,26 @@ void Logger::finish()
 
 DWORD WINAPI logingAngles(LPVOID lpParam)
 {
-	/*Logger* l = (Logger*)lpParam;
+	Logger* l = (Logger*)lpParam;
 	queue<POINTFLOAT>* data = l->queues.angles_queue;
 	ofstream file(ANGLESFILE, std::ios::app);
 	file << format("[GAMEID = {}]", l->game_id);
 	while (l->started) {
 		if (l->log) {
-			if (!(data->empty())) {
+			if (data->size() > 0) {
 				POINTFLOAT p = data->front();
 				data->pop();
-				file << "\n{ ""x"":" << to_string(p.x) << ", ""y"":" << to_string(p.y) << " }";
+				file << "\n{ ""x"":" << p.x << ", ""y"":" << p.y << " }";
 			}
 		}
 	}
-	while (!(data->empty())) {
+	while (data->size() > 0) {
 		POINTFLOAT p = data->front();
 		data->pop();
-		file << "\n{ ""x"":" << to_string(p.x) << ", ""y"":" << to_string(p.y) << " }";
+		file << "\n{ ""x"":" << p.x << ", ""y"":" << p.y << " }";
 	}
-	file << "\n";
-	file.close();*/
+	file << "\n[ENDGAME]\n";
+	file.close();
 	return 0;
 }
 
@@ -106,31 +106,33 @@ DWORD WINAPI logingCoords(LPVOID lpParam)
 			if (data->size()>0) {
 				POINT p = data->front();
 				data->pop();
-				file << "\n{ ""x"":"<<to_string(p.x)<<", ""y"":"<<to_string(p.y)<< " }";
+				file << "\n{ ""x"":" << fixed << setprecision(5) << p.x <<", ""y"":" << fixed << setprecision(5) << p.y << " }";
 			}
 		}
 	}
-	/*while (!(data->empty())) {
+	while (data->size()>0) {
 		POINT p = data->front();
 		data->pop();
-		file << "\n{ ""x"":" << to_string(p.x) << ", ""y"":" << to_string(p.y) << " }";
-	}*/
-	file << "\n";
+		file << "\n{ ""x"":" << fixed << setprecision(5) << p.x << ", ""y"":" << fixed << setprecision(5) << p.y << " }";
+	}
+	file << "\n[ENDGAME]\n";
 	file.close();
 	return 0;
 }
 
 DWORD WINAPI logingTargets(LPVOID lpParam)
 {
-	//Logger* l = (Logger*)lpParam;
-	//vector<target>* data = l ->queues.targets_queue;
-	//ofstream file(TARGETSFILE, std::ios::app);
-	//file << format("[GAMEID = {}]", l->game_id);
-	//for(target t : *data){
-	//	file << "1";
-	//	//file << format("\n{ ""x"":{}, ""y"":{}, ""sections"":{}, ""ttl"":{} }", t.getX(), t.getY(), t.getSections());
-	//}
-	//file << "\n";
-	//file.close();
+	Logger* l = (Logger*)lpParam;
+	vector<target>* data = l ->queues.targets_queue;
+	ofstream file(TARGETSFILE, std::ios::app);
+	file << format("[GAMEID = {}]", l->game_id);
+	for(target t : *data){
+		file << "\n{ ""x"":" << t.getX() \
+			<< ", ""y"":" << t.getY() \
+			<< ", ""sections"":" << t.getSections() \
+			<< ", ""ttl"":" << t.getTTL();
+	}
+	file << "\n[ENDGAME]\n";
+	file.close();
 	return 0;
 }

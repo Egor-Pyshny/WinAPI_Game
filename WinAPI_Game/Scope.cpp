@@ -41,24 +41,14 @@ void Scope::setWorkingAreaHeight(int working_area_height)
     this->working_area_height = working_area_height;
 }
 
-void Scope::setMaxXAngle(float maxXAngle)
+void Scope::setXAngle(float minXAngle)
 {
-    this->maxXAngle = maxXAngle;
+    this->XAngle = minXAngle;
 }
 
-void Scope::setMaxYAngle(float maxYAngle)
+void Scope::setYAngle(float minYAngle)
 {
-    this->maxYAngle = maxYAngle;
-}
-
-void Scope::setMinXAngle(float minXAngle)
-{
-    this->minXAngle = minXAngle;
-}
-
-void Scope::setMinYAngle(float minYAngle)
-{
-    this->minYAngle = minYAngle;
+    this->YAngle = minYAngle;
 }
 
 void Scope::setCenterXAngle(float centerXAngle)
@@ -112,8 +102,8 @@ void Scope::move_by_angles(POINTFLOAT p)
     float delta_x = 0-p.x;
     float delta_y = 0-p.y;
     if (abs(delta_x) > fault && abs(delta_x) > fault) {
-        float scaling_coef_x = p.x > 0 ? p.x / abs(this->maxXAngle) : p.x / abs(this->minXAngle);
-        float scaling_coef_y = p.y > 0 ? p.y / abs(this->maxYAngle) : p.y / abs(this->minYAngle);
+        float scaling_coef_x = p.x / this->XAngle;
+        float scaling_coef_y = p.y / this->YAngle;
         this->x += step * scaling_coef_x;
         this->y += step * scaling_coef_y;
         if (this->y < 0) this->y = 0;

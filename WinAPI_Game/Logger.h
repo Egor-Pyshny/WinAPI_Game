@@ -6,12 +6,14 @@
 #define ANGLESFILE "./log/angles.txt"
 #define COORDINATESFILE "./log/coords.txt"
 #define TARGETSFILE "./log/targets.txt"
+#define GAMEINFOFILE "./log/gameinfo.txt"
 
 #include <string>
 #include <fstream>
 #include <queue>
 #include <windows.h>
 #include <format>
+#include <iomanip> 
 #include "Target.h"
 
 using namespace std;

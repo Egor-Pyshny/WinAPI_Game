@@ -92,10 +92,8 @@ int current_target_number = 0;
 int bullet_number = 0;
 int targets_amount = 5;
 bool isplaying = false;
-float maxXAngle = 0;
-float maxYAngle = 0;
-float minXAngle = 0;
-float minYAngle = 0;
+float XAngle = 0;
+float YAngle = 0;
 float centerXAngle = 0;
 float centerYAngle = 0;
 int fps = 0;
@@ -310,12 +308,12 @@ DWORD WINAPI GetData(LPVOID lpParam) {
     //            }*/
     //            if (EnableStopX) {
     //                minXAngle = currentAngles.x;
-    //                std::wstring floatString = std::to_wstring(minXAngle);
+    //                std::wstring floatString = std::to_wstring(XAngle);
     //                SetWindowText(hwndXTexbox, floatString.c_str());
     //            } 
     //            if (EnableStopY) {
     //                minYAngle = currentAngles.y;
-    //                std::wstring floatString = std::to_wstring(minYAngle);
+    //                std::wstring floatString = std::to_wstring(YAngle);
     //                SetWindowText(hwndYTexbox, floatString.c_str());
     //            } 
     //            if (EnableStopCenter) {
@@ -551,7 +549,17 @@ LRESULT CALLBACK Game_WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPa
                 (yPos >= 550 && yPos <= 580)) {
                 logger_angles->start();
                 logger_coords->start();
-                logger_targets->start();
+                logger_targets->start();     
+                ofstream file(GAMEINFOFILE);
+                file << "[GAMEID" << game_id << "]";
+                file << "{ ""resolution"":" << WINDOW_WIDTH << "x" << WINDOW_HEIGHT \
+                    << ", ""targetsAmount"":" << targets.size() \
+                    << ", ""XAngle"":" << XAngle \
+                    << ", ""YAngle"":" << YAngle \
+                    << ", ""centerXAngle"":" << centerXAngle \
+                    << ", ""centerYAngle"":" << centerYAngle << "\n";
+                file << "[ENDGAME]";
+                file.close();
                 game_id++;
                 SetNewValue(hkey, game_id);
                 RestartGame(hwnd);
@@ -872,10 +880,8 @@ LRESULT CALLBACK Settings_WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM
                 PlaceTargetsRandom();
                 isplaying = true;
                 ShowWindow(hwndSettingsWindow, SW_HIDE);
-                scope.setMaxXAngle(minXAngle);
-                scope.setMaxYAngle(minYAngle);
-                scope.setMinXAngle(minXAngle);
-                scope.setMinYAngle(minYAngle);
+                scope.setXAngle(XAngle);
+                scope.setYAngle(YAngle);
                 scope.setCenterXAngle(centerXAngle);
                 scope.setCenterYAngle(centerYAngle);
                 if (hTargetsThread != NULL) {
@@ -891,6 +897,16 @@ LRESULT CALLBACK Settings_WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM
                 logger_angles->start();
                 logger_coords->start();
                 logger_targets->start();
+                ofstream file(GAMEINFOFILE);
+                file << "[GAMEID" << game_id << "]";
+                file << "{ ""resolution"":" << WINDOW_WIDTH << "x" << WINDOW_HEIGHT \
+                    << ", ""targetsAmount"":" << targets.size() \
+                    << ", ""XAngle"":" << XAngle \
+                    << ", ""YAngle"":" << YAngle \
+                    << ", ""centerXAngle"":" << centerXAngle \
+                    << ", ""centerYAngle"":" << centerYAngle << "\n";
+                file << "[ENDGAME]";
+                file.close();
                 game_id++;
                 SetNewValue(hkey, game_id);
                 ShowWindow(hwndGameWindow, SW_SHOWNORMAL);

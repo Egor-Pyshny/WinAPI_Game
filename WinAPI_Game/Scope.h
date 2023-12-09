@@ -19,10 +19,8 @@ public:
 	void setY(int y);
 	void setWorkingAreaWidth(int working_area_width);
 	void setWorkingAreaHeight(int working_area_height);
-	void setMaxXAngle(float maxXAngle);
-	void setMaxYAngle(float maxYAngle);
-	void setMinXAngle(float minXAngle);
-	void setMinYAngle(float minYAngle);
+	void setXAngle(float maxXAngle);
+	void setYAngle(float maxYAngle);
 	void setCenterXAngle(float centerXAngle);
 	void setCenterYAngle(float centerYAngle);
 private:
@@ -31,10 +29,8 @@ private:
 	const int step = 10;
 	const int max = 17;
 	float fault = 0.07;
-	float maxXAngle = 0;
-	float maxYAngle = 0;
-	float minXAngle = 0;
-	float minYAngle = 0;
+	float XAngle = 0;
+	float YAngle = 0;
 	float centerXAngle = 0;
 	float centerYAngle = 0;
 	int x = 0;
