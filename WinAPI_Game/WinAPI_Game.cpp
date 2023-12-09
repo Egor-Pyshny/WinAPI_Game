@@ -404,19 +404,6 @@ void DrawScoreText(HDC hdc) {
     DrawTextW(hdc, text.c_str(), -1, &text_rect, DT_CENTER);
 }
 
-void DrawRestartButton(HDC hdc) {
-    //рисование кнопки относительно рабочей области а не по координатам через GetClientRect
-    SetBkMode(hdc, TRANSPARENT);
-    RECT restart_game = { WINDOW_WIDTH - 280,500,WINDOW_WIDTH - 34,560 };
-    //RECT restart_game_text = { 620,555,880,580 };
-    HBRUSH hBrush = CreateSolidBrush(RGB(181, 181, 181));
-    FillRect(hdc, &restart_game, hBrush);
-    DeleteObject(hBrush);
-    const WCHAR text[] = L"Restart";
-    int textSize = ARRAYSIZE(text);
-    //DrawTextW(hdc, text, textSize, &restart_game_text, DT_CENTER | DT_VCENTER);
-}
-
 void SwitchTarget() {
     if ((current_target_number < targets.size()) && isplaying) {
         current_target = &targets[current_target_number];
@@ -432,6 +419,7 @@ void SwitchTarget() {
         logger_coords->setGameId(game_id);
         logger_targets->setGameId(game_id);
         isplaying = false;        
+        EnableWindow(hwndButtonRestartGame, TRUE);
     }
 }
 
@@ -530,7 +518,6 @@ LRESULT CALLBACK Game_WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPa
             }
             //DrawBullets(hdcBuffer);
         }
-        DrawRestartButton(hdcBuffer);
         DrawScope(hdcBuffer);
         BitBlt(hdc, 0, 0, ps.rcPaint.right, ps.rcPaint.bottom, hdcBuffer, 0, 0, SRCCOPY);
         EndPaint(hwnd, &ps);
@@ -539,34 +526,6 @@ LRESULT CALLBACK Game_WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPa
     }
     case WM_ERASEBKGND:
         return 1;
-    case WM_LBUTTONUP: 
-    {
-        if (!isplaying) {
-            RECT restart_game = { 620,550,720,580 };
-            int xPos = GET_X_LPARAM(lParam);
-            int yPos = GET_Y_LPARAM(lParam);
-            if ((xPos >= 620 && xPos <= 720) &&
-                (yPos >= 550 && yPos <= 580)) {
-                logger_angles->start();
-                logger_coords->start();
-                logger_targets->start();     
-                ofstream file(GAMEINFOFILE);
-                file << "[GAMEID" << game_id << "]";
-                file << "{ ""resolution"":" << WINDOW_WIDTH << "x" << WINDOW_HEIGHT \
-                    << ", ""targetsAmount"":" << targets.size() \
-                    << ", ""XAngle"":" << XAngle \
-                    << ", ""YAngle"":" << YAngle \
-                    << ", ""centerXAngle"":" << centerXAngle \
-                    << ", ""centerYAngle"":" << centerYAngle << "\n";
-                file << "[ENDGAME]";
-                file.close();
-                game_id++;
-                SetNewValue(hkey, game_id);
-                RestartGame(hwnd);
-            }
-        }
-        break;
-    }
     case WM_TIMER: 
     {
         switch ((UINT_PTR)wParam)
@@ -598,6 +557,39 @@ LRESULT CALLBACK Game_WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPa
         }
         default:
             break;
+        }
+    }
+    case WM_COMMAND:
+    {
+        switch (LOWORD(wParam))
+        {
+        case IDC_SETTINGS_BUTTON:
+        {
+            DestroyWindow(hwndGameWindow);
+            break;
+        }
+        case IDC_RESTART_BUTTON:
+        {
+            logger_angles->start();
+            logger_coords->start();
+            logger_targets->start();
+            ofstream file(GAMEINFOFILE, std::ios::app);
+            file << "[GAMEID" << game_id << "]";
+            file << "{ ""resolution"":" << WINDOW_WIDTH << "x" << WINDOW_HEIGHT \
+                << ", ""targetsAmount"":" << targets.size() \
+                << ", ""XAngle"":" << XAngle \
+                << ", ""YAngle"":" << YAngle \
+                << ", ""centerXAngle"":" << centerXAngle \
+                << ", ""centerYAngle"":" << centerYAngle << " }\n";
+            file << "[ENDGAME]";
+            file.close();
+            game_id++;
+            EnableWindow(hwndButtonRestartGame, FALSE);
+            SetNewValue(hkey, game_id);
+            RestartGame(hwnd);
+            SetFocus(hwndGameWindow);
+            break;
+        }
         }
     }
     }
@@ -742,6 +734,27 @@ int DrawComponentsSettings(HWND hwnd, HINSTANCE hInstance) {
 }
 
 int DrawComponentsGame(HWND hwnd, HINSTANCE hInstance) {
+    hwndButtonRestartGame = CreateWindow(
+        L"BUTTON",
+        L"RestartGame",
+        WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON | BS_MULTILINE,
+        WINDOW_WIDTH - 280, WINDOW_HEIGHT - 90, 246, 40,
+        hwnd,
+        (HMENU)IDC_RESTART_BUTTON,
+        hInstance,
+        NULL
+    );
+    EnableWindow(hwndButtonRestartGame, FALSE);
+    hwndButtonSettigs = CreateWindow(
+        L"BUTTON",
+        L"Settings",
+        WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON | BS_MULTILINE,
+        WINDOW_WIDTH - 280, WINDOW_HEIGHT - 140, 246, 40,
+        hwnd,
+        (HMENU)IDC_SETTINGS_BUTTON,
+        hInstance,
+        NULL
+    );
     return 0;
 }
 
@@ -897,17 +910,19 @@ LRESULT CALLBACK Settings_WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM
                 logger_angles->start();
                 logger_coords->start();
                 logger_targets->start();
-                ofstream file(GAMEINFOFILE);
+                ofstream file(GAMEINFOFILE, std::ios::app);
                 file << "[GAMEID" << game_id << "]";
-                file << "{ ""resolution"":" << WINDOW_WIDTH << "x" << WINDOW_HEIGHT \
+                file << "\n{ ""resolution"":" << WINDOW_WIDTH << "x" << WINDOW_HEIGHT \
                     << ", ""targetsAmount"":" << targets.size() \
                     << ", ""XAngle"":" << XAngle \
                     << ", ""YAngle"":" << YAngle \
                     << ", ""centerXAngle"":" << centerXAngle \
-                    << ", ""centerYAngle"":" << centerYAngle << "\n";
+                    << ", ""centerYAngle"":" << centerYAngle << " }\n";
                 file << "[ENDGAME]";
                 file.close();
                 game_id++;
+                EnableWindow(hwndButtonRestartGame, FALSE);
+                DrawComponentsGame(hwndGameWindow, (HINSTANCE)GetWindowLongPtr(hwndGameWindow, GWLP_HINSTANCE));
                 SetNewValue(hkey, game_id);
                 ShowWindow(hwndGameWindow, SW_SHOWNORMAL);
                 UpdateWindow(hwndGameWindow);

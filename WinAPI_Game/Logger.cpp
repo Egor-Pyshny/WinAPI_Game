@@ -78,14 +78,14 @@ DWORD WINAPI logingAngles(LPVOID lpParam)
 	file << format("[GAMEID = {}]", l->game_id);
 	while (l->started) {
 		if (l->log) {
-			if (data->size() > 0) {
+			if (data != NULL && data->size() > 0) {
 				POINTFLOAT p = data->front();
 				data->pop();
 				file << "\n{ ""x"":" << p.x << ", ""y"":" << p.y << " }";
 			}
 		}
 	}
-	while (data->size() > 0) {
+	while (data != NULL && data->size() > 0) {
 		POINTFLOAT p = data->front();
 		data->pop();
 		file << "\n{ ""x"":" << p.x << ", ""y"":" << p.y << " }";
@@ -103,14 +103,14 @@ DWORD WINAPI logingCoords(LPVOID lpParam)
 	file << format("[GAMEID = {}]", l->game_id);
 	while (l->started) {
 		if (l->log) {
-			if (data->size()>0) {
+			if (data != NULL && data->size()>0) {
 				POINT p = data->front();
 				data->pop();
 				file << "\n{ ""x"":" << fixed << setprecision(5) << p.x <<", ""y"":" << fixed << setprecision(5) << p.y << " }";
 			}
 		}
 	}
-	while (data->size()>0) {
+	while (data != NULL && data->size()>0) {
 		POINT p = data->front();
 		data->pop();
 		file << "\n{ ""x"":" << fixed << setprecision(5) << p.x << ", ""y"":" << fixed << setprecision(5) << p.y << " }";
@@ -130,7 +130,7 @@ DWORD WINAPI logingTargets(LPVOID lpParam)
 		file << "\n{ ""x"":" << t.getX() \
 			<< ", ""y"":" << t.getY() \
 			<< ", ""sections"":" << t.getSections() \
-			<< ", ""ttl"":" << t.getTTL();
+			<< ", ""ttl"":" << t.getTTL() << " }";
 	}
 	file << "\n[ENDGAME]\n";
 	file.close();
