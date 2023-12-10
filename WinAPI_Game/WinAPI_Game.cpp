@@ -297,13 +297,13 @@ DWORD WINAPI GetData(LPVOID lpParam) {
     //int port = 8888;
     //const char* ipAddressStr = "192.168.150.2";
     //POINTFLOAT radianPoint;
-    //Connection network(ipAddressStr,9998);
-    //network.setLogger(logger_angles);
-    //bool connected = network.Connect();
+    //Connection сonnection(ipAddressStr,9998);
+    //connection.setLogger(logger_angles);
+    //bool connected = connection.Connect();
     //if(connected){
     //    while (true)
     //    {
-    //        if (network.NextXY(radianPoint))
+    //        if (connection.NextXY(radianPoint))
     //        {
     //            currentAngles = { radianPoint.x * 180/(float)M_PI , radianPoint.y * 180 / (float)M_PI };
     //            if (CenterCalibrated) {
@@ -415,9 +415,9 @@ void DrawScoreText(HDC hdc) {
 void DrawTargetText(HDC hdc) {
     RECT text_rect = { WINDOW_WIDTH - 300,50,WINDOW_WIDTH,70 };
     string temp = "Target: ";
-    temp += to_string(current_target_number-1);
+    temp += to_string(current_target_number);
     temp += "/";
-    temp += to_string(targets_amount);
+    temp += to_string(targets.size());
     temp += "\0\0";
     wstring text(temp.begin(), temp.end());
     DrawTextW(hdc, text.c_str(), -1, &text_rect, DT_CENTER);
@@ -427,7 +427,7 @@ void SwitchTarget() {
     if ((current_target_number < targets.size()) && isplaying) {
         current_target = &targets[current_target_number];
         current_target_number+=1;
-        SetTimer(hwndGameWindow, IDC_DRAWTIMER_ID, 1000 * current_target->getTTL() + 1, NULL);
+        SetTimer(hwndGameWindow, IDC_DRAWTIMER_ID, 1001 * current_target->getTTL() + 1, NULL);
     }
     else {
         KillTimer(hwndGameWindow, IDC_DRAWTIMER_ID);
@@ -488,7 +488,6 @@ LRESULT CALLBACK Game_WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPa
         ShowWindow(hwndSettingsWindow, SW_SHOWNORMAL);
         KillTimer(hwnd, IDC_FPSTIMER_ID);
         KillTimer(hwnd, IDC_DRAWTIMER_ID);
-        KillTimer(hwnd, 5);
         break;
     }
     case WM_SHOWWINDOW:
@@ -504,9 +503,8 @@ LRESULT CALLBACK Game_WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPa
                 current_target = &targets[current_target_number];
                 current_target_number++;
             }
-            SetTimer(hwndGameWindow, IDC_DRAWTIMER_ID, 1000 * current_target->getTTL() + 1, NULL);
+            SetTimer(hwndGameWindow, IDC_DRAWTIMER_ID, 1001 * current_target->getTTL() + 1, NULL);
             SetTimer(hwndGameWindow, IDC_FPSTIMER_ID, 15, NULL);
-            SetTimer(hwndGameWindow, 5, 1000, NULL);
             return 0;
         }
         break;
@@ -533,12 +531,12 @@ LRESULT CALLBACK Game_WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPa
         DrawScoreText(hdcBuffer);
         DrawTargetText(hdcBuffer);
         if (isplaying) {
-            DrawScope(hdcBuffer);
             path.push_back(POINT(scope.getX() + 12, scope.getY() + 12));
             if (current_target != NULL) {
                 DrawTarget(hdcBuffer);
             }
             DrawBullets(hdcBuffer);
+            DrawScope(hdcBuffer);
         }
         else {
             Polyline(hdcBuffer, path.data(), path.size());
@@ -907,7 +905,7 @@ LRESULT CALLBACK Settings_WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM
             int selectedIndex = SendMessage(hwndComboBox, CB_GETCURSEL, 0, 0);
             if (XCalibrated && YCalibrated && CenterCalibrated && selectedIndex != -1) {
                 int textLength = GetWindowTextLength(hwndTargetsAmountTexbox) + 1;
-                /*if (textLength > 1) {
+                if (textLength > 1) {
                     wchar_t* buffer = new wchar_t[textLength];
                     wchar_t* stopwcs;
                     GetWindowText(hwndTargetsAmountTexbox, buffer, textLength);
@@ -926,7 +924,7 @@ LRESULT CALLBACK Settings_WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM
                     else {
                         break;
                     }
-                }*/
+                }
                 hwndGameWindow = CreateWindowEx(
                     0,
                     L"Game",
@@ -939,9 +937,9 @@ LRESULT CALLBACK Settings_WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM
                     NULL
                 );
                 SetResolution(resolutions[selectedIndex]);
-                /*if (targets_amount != 0) {
+                if (targets_amount != 0) {
                     GenerateTargets();
-                }*/
+                }
                 PlaceTargetsRandom();
                 isplaying = true;
                 ShowWindow(hwndSettingsWindow, SW_HIDE);
