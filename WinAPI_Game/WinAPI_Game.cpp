@@ -793,21 +793,25 @@ void SetResolution(const wchar_t* resolution) {
         wstring height = wstr.substr(pos + 1);
         WINDOW_WIDTH = stoi(width);
         WINDOW_HEIGHT = stoi(height);
+        SetWindowPos(
+            hwndGameWindow,
+            NULL,
+            0, 0,
+            WINDOW_WIDTH,
+            WINDOW_HEIGHT,
+            SWP_NOMOVE | SWP_NOZORDER
+        );
     }
     else {
         RECT workArea;
         SystemParametersInfo(SPI_GETWORKAREA, 0, &workArea, 0);
-        WINDOW_WIDTH = workArea.right - workArea.left;
-        WINDOW_HEIGHT = workArea.bottom - workArea.top;
+        WINDOW_WIDTH = GetSystemMetrics(SM_CXSCREEN);
+        WINDOW_HEIGHT = GetSystemMetrics(SM_CYSCREEN);
+        LONG style = GetWindowLong(hwndGameWindow, GWL_STYLE);
+        SetWindowLong(hwndGameWindow, GWL_STYLE, style & ~WS_OVERLAPPEDWINDOW);
+        SetWindowPos(hwndGameWindow, HWND_TOP, 0, 0, GetSystemMetrics(SM_CXSCREEN), GetSystemMetrics(SM_CYSCREEN), SWP_FRAMECHANGED);
     }
-    SetWindowPos(
-        hwndGameWindow,
-        NULL,
-        0, 0,
-        WINDOW_WIDTH,
-        WINDOW_HEIGHT,
-        SWP_NOMOVE | SWP_NOZORDER
-    );
+    
 }
 
 LRESULT CALLBACK Settings_WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)

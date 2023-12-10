@@ -2,8 +2,8 @@
 
 Converter::Converter(int width, int height, float maxAngleX, float maxAngleY)
 {
-	maxCoordX = width;
-	maxCoordY = height;
+	width = width;
+	height = height;
 
 	this->maxAngleX = maxAngleX;
 	this->maxAngleY = maxAngleY;
@@ -18,13 +18,13 @@ Converter::Converter(int width, int height, float maxAngleX, float maxAngleY)
 int Converter::ToCoordX(float angle)
 {
 	angle = -angle + maxAngleX;
-	return (int)round(angle * maxCoordX / angleWidth);
+	return (int)round(angle * width / angleWidth);
 }
 
 int Converter::ToCoordY(float angle)
 {
 	angle = -angle + maxAngleY;
-	return (int)round(angle * maxCoordY / angleHeight);
+	return (int)round(angle * height / angleHeight);
 }
 
 POINT Converter::ToCoord(POINTFLOAT point)

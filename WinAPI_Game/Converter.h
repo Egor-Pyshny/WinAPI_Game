@@ -15,8 +15,8 @@ public:
 	int ToCoordY(float angle);
 	POINT ToCoord(POINTFLOAT point);
 protected:
-	int maxCoordX;
-	int maxCoordY;
+	int width;
+	int height;
 
 	float maxAngleX;
 	float maxAngleY;
