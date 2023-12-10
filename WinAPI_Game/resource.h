@@ -34,6 +34,8 @@
 #define IDC_SETTINGS_BUTTON             27
 #define IDC_RESTART_BUTTON              28
 #define IDC_SENSITIVITY_TRACKBAR        29
+#define IDC_MINTTL_TRACKBAR             31
+#define IDC_MAXTTL_TRACKBAR             32
 #define MAX_BULLETS                     30
 
 // Next default values for new objects

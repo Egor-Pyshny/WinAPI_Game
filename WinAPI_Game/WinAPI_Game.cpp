@@ -4,6 +4,8 @@
 #define _USE_MATH_DEFINES
 #define MAX_SENSITIVITY 25
 #define MIN_SENSITIVITY 7
+#define MAX_TTL 90
+#define MIN_TTL 1
 
 #include <WS2tcpip.h>
 #include <CommCtrl.h>
@@ -46,7 +48,11 @@ vector<int> v;
 HWND hwndLabelX;
 HWND hwndLabelY;
 HWND hwndLabelSensitivity;
+HWND hwndLabelMinTTL;
+HWND hwndLabelMaxTTL;
 HWND hwndTrackBarSensitivity;
+HWND hwndTrackBarMinTTL;
+HWND hwndTrackBarMaxTTL;
 HWND hwndLabelTargetsAmount;
 HWND hwndLabelResolution;
 HWND hwndButtonStartCalibratingX;
@@ -105,6 +111,8 @@ float centerXAngle = 0;
 float centerYAngle = 0;
 int fps = 0;
 int sensitivity = MIN_SENSITIVITY;
+int minTTL = MIN_TTL;
+int maxTTL = 10;
 
 int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine, int nCmdShow)
 {
@@ -138,7 +146,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
     {
         return 1;
     }
-    RECT newClientRect = { 0, 0, 400, 510 };
+    RECT newClientRect = { 0, 0, 400, 630 };
     AdjustWindowRect(&newClientRect, WS_OVERLAPPEDWINDOW, FALSE);
     SetWindowPos(
         hwndSettingsWindow,
@@ -283,7 +291,7 @@ void GenerateTargets() {
     random_device random_device;
     mt19937 generator(random_device());
     uniform_int_distribution<> distribution_section(3, 5);
-    uniform_int_distribution<> distribution_ttl(1, 5);
+    uniform_int_distribution<> distribution_ttl(minTTL, maxTTL);
     for (int i = 0; i < targets_amount; i++) {
         int sections = distribution_section(generator);
         int ttl = distribution_ttl(generator);
@@ -566,6 +574,8 @@ LRESULT CALLBACK Game_WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPa
             DoubleBuff(hwnd);
             //fps++;
             InvalidateRect(hwnd, NULL, TRUE);
+            RECT buttons_rect{ WINDOW_WIDTH - 295, WINDOW_HEIGHT - 150,WINDOW_WIDTH, WINDOW_HEIGHT };
+            ValidateRect(hwnd, &buttons_rect);
             break;
         }
         case IDC_DRAWTIMER_ID:
@@ -758,11 +768,53 @@ int DrawComponentsSettings(HWND hwnd, HINSTANCE hInstance) {
 
     hwndLabelSensitivity = CreateWindowEx(0, L"STATIC", buffer, WS_CHILD | WS_VISIBLE, 100, 445, 200, 20, hwnd, NULL, NULL, NULL);
 
+    hwndTrackBarMinTTL = CreateWindowEx(
+        NULL,
+        TRACKBAR_CLASS,
+        NULL,
+        WS_CHILD | WS_VISIBLE | TBS_HORZ | TBS_AUTOTICKS,
+        100, 470, 200, 30,
+        hwnd,
+        (HMENU)IDC_MINTTL_TRACKBAR,
+        hInstance,
+        NULL
+    );
+    SendMessage(hwndTrackBarMinTTL, TBM_SETRANGE, TRUE, MAKELPARAM(MIN_TTL, MAX_TTL));
+    SendMessage(hwndTrackBarMinTTL, TBM_SETPAGESIZE, 0, 1);
+    SendMessage(hwndTrackBarMinTTL, TBM_SETTICFREQ, 1, 0);
+    SendMessage(hwndTrackBarMinTTL, TBM_SETTIC, 0, 0);
+    SendMessage(hwndTrackBarMinTTL, TBM_SETPOS, 1, 1);
+    wchar_t buffer1[20];
+    wsprintf(buffer1, L"Min TTL = %d", minTTL);
+
+    hwndLabelMinTTL = CreateWindowEx(0, L"STATIC", buffer1, WS_CHILD | WS_VISIBLE, 100, 505, 200, 20, hwnd, NULL, NULL, NULL);
+
+    hwndTrackBarMaxTTL = CreateWindowEx(
+        NULL,
+        TRACKBAR_CLASS,
+        NULL,
+        WS_CHILD | WS_VISIBLE | TBS_HORZ | TBS_AUTOTICKS,
+        100, 530, 200, 30,
+        hwnd,
+        (HMENU)IDC_MINTTL_TRACKBAR,
+        hInstance,
+        NULL
+    );
+    SendMessage(hwndTrackBarMaxTTL, TBM_SETRANGE, TRUE, MAKELPARAM(MIN_TTL, MAX_TTL));
+    SendMessage(hwndTrackBarMaxTTL, TBM_SETPAGESIZE, 0, 1);
+    SendMessage(hwndTrackBarMaxTTL, TBM_SETTICFREQ, 1, 0);
+    SendMessage(hwndTrackBarMaxTTL, TBM_SETTIC, 0, 0);
+    SendMessage(hwndTrackBarMaxTTL, TBM_SETPOS, 1, 10);
+    wchar_t buffer2[20];
+    wsprintf(buffer2, L"Max TTL = %d", maxTTL);
+
+    hwndLabelMaxTTL = CreateWindowEx(0, L"STATIC", buffer2, WS_CHILD | WS_VISIBLE, 100, 565, 200, 20, hwnd, NULL, NULL, NULL);
+
     hwndButtonStartGame = CreateWindow(
         L"BUTTON",
         L"Start game",
         WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON | BS_MULTILINE,
-        100, 470, 200, 30,
+        100, 590, 200, 30,
         hwnd,
         (HMENU)IDC_STARTGAME_BUTTON,
         hInstance,
@@ -841,7 +893,7 @@ LRESULT CALLBACK Settings_WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM
     }
     case WM_CTLCOLORSTATIC:
     {
-        if ((HWND)lParam == hwndLabelX || (HWND)lParam == hwndLabelY || (HWND)lParam == hwndLabelResolution || (HWND)lParam == hwndLabelTargetsAmount || (HWND)lParam == hwndLabelSensitivity)
+        if ((HWND)lParam == hwndLabelX || (HWND)lParam == hwndLabelMaxTTL || (HWND)lParam == hwndLabelMinTTL || (HWND)lParam == hwndLabelY || (HWND)lParam == hwndLabelResolution || (HWND)lParam == hwndLabelTargetsAmount || (HWND)lParam == hwndLabelSensitivity)
         {
             return (LRESULT)CreateSolidBrush(RGB(255, 255, 255));
         }
@@ -849,10 +901,24 @@ LRESULT CALLBACK Settings_WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM
     }
     case WM_HSCROLL: 
     {
-        sensitivity = SendMessage(hwndTrackBarSensitivity, TBM_GETPOS, 0, 0);
-        wchar_t buffer[20];
-        wsprintf(buffer, L"Sensitivity = %d", sensitivity);
-        SetWindowTextW(hwndLabelSensitivity, buffer);
+        if (hwndTrackBarSensitivity == (HWND)lParam) {
+            sensitivity = SendMessage(hwndTrackBarSensitivity, TBM_GETPOS, 0, 0);
+            wchar_t buffer[20];
+            wsprintf(buffer, L"Sensitivity = %d", sensitivity);
+            SetWindowTextW(hwndLabelSensitivity, buffer);
+        }
+        else if (hwndTrackBarMinTTL == (HWND)lParam) {
+            minTTL = SendMessage(hwndTrackBarMinTTL, TBM_GETPOS, 0, 0);
+            wchar_t buffer[20];
+            wsprintf(buffer, L"Min TTL = %d", minTTL);
+            SetWindowTextW(hwndLabelMinTTL, buffer);
+        }
+        else if (hwndTrackBarMaxTTL == (HWND)lParam) {
+            maxTTL = SendMessage(hwndTrackBarMaxTTL, TBM_GETPOS, 0, 0);
+            wchar_t buffer[20];
+            wsprintf(buffer, L"Max TTL = %d", maxTTL);
+            SetWindowTextW(hwndLabelMaxTTL, buffer);
+        }
         break;
     }
     case WM_COMMAND:
@@ -936,6 +1002,10 @@ LRESULT CALLBACK Settings_WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM
                     (HINSTANCE)GetWindowLongPtr(hwndSettingsWindow, GWLP_HINSTANCE),
                     NULL
                 );
+                if (minTTL >= maxTTL) {
+                    MessageBox(hwndSettingsWindow, L"MinTTL cant be more or equal than MaxTTL", L"Error", MB_ICONWARNING | MB_OK);
+                    break;
+                }
                 SetResolution(resolutions[selectedIndex]);
                 if (targets_amount != 0) {
                     GenerateTargets();
