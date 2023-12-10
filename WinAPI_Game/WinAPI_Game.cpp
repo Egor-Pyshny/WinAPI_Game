@@ -75,6 +75,7 @@ HBITMAP hBitmap = NULL;
 HBITMAP hOldBitmap = NULL;
 Bitmap* scope_png = NULL;
 vector<target> targets;
+vector<POINT> path;
 target* current_target = NULL;
 queue<Point> points;
 POINTFLOAT currentAngles;
@@ -403,9 +404,20 @@ void DrawBullets(HDC hdc) {
 }
 
 void DrawScoreText(HDC hdc) {
-    RECT text_rect = { WINDOW_WIDTH - 300,20,WINDOW_WIDTH,70 };
+    RECT text_rect = { WINDOW_WIDTH - 300,20,WINDOW_WIDTH,50 };
     string temp = "Score: ";
+    temp += to_string(score);
+    temp += "\0\0";
+    wstring text(temp.begin(), temp.end());
+    DrawTextW(hdc, text.c_str(), -1, &text_rect, DT_CENTER);
+}
+
+void DrawTargetText(HDC hdc) {
+    RECT text_rect = { WINDOW_WIDTH - 300,50,WINDOW_WIDTH,70 };
+    string temp = "Target: ";
     temp += to_string(current_target_number-1);
+    temp += "/";
+    temp += to_string(targets_amount);
     temp += "\0\0";
     wstring text(temp.begin(), temp.end());
     DrawTextW(hdc, text.c_str(), -1, &text_rect, DT_CENTER);
@@ -465,6 +477,7 @@ LRESULT CALLBACK Game_WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPa
     switch (uMsg)
     {
     case WM_DESTROY: {
+        path.clear();
         logger_angles->finish();
         logger_coords->finish();
         logger_targets->finish();
@@ -513,19 +526,23 @@ LRESULT CALLBACK Game_WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPa
     }
     case WM_PAINT:
     {
-        fps++;
         PAINTSTRUCT ps;
         HDC hdc = BeginPaint(hwnd, &ps);
         FillBackground(hwnd, hdcBuffer);
         DrawDivider(hdcBuffer);
         DrawScoreText(hdcBuffer);
+        DrawTargetText(hdcBuffer);
         if (isplaying) {
+            DrawScope(hdcBuffer);
+            path.push_back(POINT(scope.getX() + 12, scope.getY() + 12));
             if (current_target != NULL) {
                 DrawTarget(hdcBuffer);
             }
-            //DrawBullets(hdcBuffer);
+            DrawBullets(hdcBuffer);
         }
-        DrawScope(hdcBuffer);
+        else {
+            Polyline(hdcBuffer, path.data(), path.size());
+        }
         BitBlt(hdc, 0, 0, ps.rcPaint.right, ps.rcPaint.bottom, hdcBuffer, 0, 0, SRCCOPY);
         EndPaint(hwnd, &ps);
         ReleaseDoubleBuffer();
@@ -553,11 +570,6 @@ LRESULT CALLBACK Game_WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPa
             InvalidateRect(hwnd, NULL, TRUE);
             break;
         }
-        case 5:
-        {
-            v.push_back(fps);
-            fps = 0;
-        }
         case IDC_DRAWTIMER_ID:
         {
             SwitchTarget();
@@ -577,6 +589,7 @@ LRESULT CALLBACK Game_WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPa
         }
         case IDC_RESTART_BUTTON:
         {
+            path.clear();
             logger_angles->start();
             logger_coords->start();
             logger_targets->start();
