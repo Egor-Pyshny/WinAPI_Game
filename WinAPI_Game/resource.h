@@ -34,9 +34,21 @@
 #define IDC_SETTINGS_BUTTON             27
 #define IDC_RESTART_BUTTON              28
 #define IDC_SENSITIVITY_TRACKBAR        29
-#define IDC_MINTTL_TRACKBAR             31
-#define IDC_MAXTTL_TRACKBAR             32
+#define IDC_MINTTL_TRACKBAR             30
+#define IDC_MAXTTL_TRACKBAR             31
+
 #define MAX_BULLETS                     30
+#define MAX_SENSITIVITY                 25
+#define MIN_SENSITIVITY                 7
+#define MAX_TTL							90
+#define MIN_TTL							1
+#define ANGLES							1
+#define COORDS							2
+#define TARGETS							3
+#define ANGLESFILE					    "./log/angles.txt"
+#define COORDINATESFILE				    "./log/coords.txt"
+#define TARGETSFILE						"./log/targets.txt"
+#define GAMEINFOFILE					"./log/gameinfo.txt"
 
 // Next default values for new objects
 // 

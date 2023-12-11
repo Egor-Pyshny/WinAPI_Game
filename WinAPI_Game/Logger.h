@@ -1,13 +1,5 @@
 #pragma once
 
-#define ANGLES 1
-#define COORDS 2
-#define TARGETS 3
-#define ANGLESFILE "./log/angles.txt"
-#define COORDINATESFILE "./log/coords.txt"
-#define TARGETSFILE "./log/targets.txt"
-#define GAMEINFOFILE "./log/gameinfo.txt"
-
 #include <string>
 #include <fstream>
 #include <queue>
@@ -15,6 +7,7 @@
 #include <format>
 #include <iomanip> 
 #include "Target.h"
+#include "resource.h"
 
 using namespace std;
 

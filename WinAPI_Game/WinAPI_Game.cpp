@@ -2,10 +2,6 @@
 #define UNICODE
 #endif 
 #define _USE_MATH_DEFINES
-#define MAX_SENSITIVITY 25
-#define MIN_SENSITIVITY 7
-#define MAX_TTL 90
-#define MIN_TTL 1
 
 #include <WS2tcpip.h>
 #include <CommCtrl.h>
