@@ -8,6 +8,7 @@
 #include <iomanip> 
 #include "Target.h"
 #include "resource.h"
+#include "MyDefines.h"
 
 using namespace std;
 

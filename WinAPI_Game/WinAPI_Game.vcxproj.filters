@@ -45,6 +45,15 @@
     <ClInclude Include="Logger.h">
       <Filter>Файлы заголовков</Filter>
     </ClInclude>
+    <ClInclude Include="MyDefines.h">
+      <Filter>Файлы заголовков</Filter>
+    </ClInclude>
+    <ClInclude Include="SoundController.h">
+      <Filter>Файлы заголовков</Filter>
+    </ClInclude>
+    <ClInclude Include="SoundEngine.h">
+      <Filter>Файлы заголовков</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="WinAPI_Game.cpp">
@@ -66,6 +75,12 @@
       <Filter>Исходные файлы</Filter>
     </ClCompile>
     <ClCompile Include="Logger.cpp">
+      <Filter>Исходные файлы</Filter>
+    </ClCompile>
+    <ClCompile Include="SoundController.cpp">
+      <Filter>Исходные файлы</Filter>
+    </ClCompile>
+    <ClCompile Include="SoundEngine.cpp">
       <Filter>Исходные файлы</Filter>
     </ClCompile>
   </ItemGroup>
@@ -93,5 +108,19 @@
     <Image Include="5section_target.png">
       <Filter>Файлы ресурсов</Filter>
     </Image>
+  </ItemGroup>
+  <ItemGroup>
+    <Media Include="..\..\..\..\Downloads\gamemusic.wav">
+      <Filter>Файлы ресурсов</Filter>
+    </Media>
+    <Media Include="..\..\..\..\Downloads\outsidetarget2.wav">
+      <Filter>Файлы ресурсов</Filter>
+    </Media>
+    <Media Include="..\..\..\..\Downloads\outsidetarget.wav">
+      <Filter>Файлы ресурсов</Filter>
+    </Media>
+    <Media Include="..\..\..\..\Downloads\intarget.wav">
+      <Filter>Файлы ресурсов</Filter>
+    </Media>
   </ItemGroup>
 </Project>

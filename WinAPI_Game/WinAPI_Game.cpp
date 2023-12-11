@@ -22,6 +22,7 @@
 #include <random>
 #include "Connection.h"
 #include "Converter.h"
+#include "MyDefines.h"
 
 #pragma comment(lib, "ws2_32.lib")
 #pragma comment(lib, "Comctl32.lib")
