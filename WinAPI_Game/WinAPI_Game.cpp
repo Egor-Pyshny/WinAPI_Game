@@ -29,6 +29,7 @@
 
 #pragma comment(lib, "ws2_32.lib")
 #pragma comment(lib, "Comctl32.lib")
+
 using namespace Gdiplus;
 using namespace std;
 
@@ -202,7 +203,7 @@ DWORD WINAPI InitilizeDefaultTargets(LPVOID lpParam) {
         t.setImage(imageList[target_info[0] - 3]);
         targets.push_back(t);
     }
-    //target t1(3, 150, 150, 600);
+    // target t1(3, 150, 150, 600);
     //t1.setImage(imageList[3 - 3]);
     //targets.push_back(t1);
     return 0;
@@ -491,8 +492,7 @@ LRESULT CALLBACK Game_WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPa
         logger_targets->finish();
         logger_angles->setGameId(game_id);
         logger_coords->setGameId(game_id);
-        logger_targets->setGameId(game_id);
-        //выставить новый game_id после finish
+        logger_targets->setGameId(game_id);        
         ShowWindow(hwndSettingsWindow, SW_SHOWNORMAL);
         KillTimer(hwnd, IDC_FPSTIMER_ID);
         KillTimer(hwnd, IDC_DRAWTIMER_ID);
@@ -544,11 +544,11 @@ LRESULT CALLBACK Game_WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPa
                 DrawTarget(hdcBuffer);
             }
             DrawBullets(hdcBuffer);
-            DrawScope(hdcBuffer);
         }
         else {
             Polyline(hdcBuffer, path.data(), path.size());
         }
+        DrawScope(hdcBuffer);
         BitBlt(hdc, 0, 0, ps.rcPaint.right, ps.rcPaint.bottom, hdcBuffer, 0, 0, SRCCOPY);
         EndPaint(hwnd, &ps);
         ReleaseDoubleBuffer();
@@ -562,17 +562,12 @@ LRESULT CALLBACK Game_WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPa
         {
         case IDC_FPSTIMER_ID:
         {
-            /*POINTFLOAT nextPoint;
-            POINT newCenter;
-            nextPoint = currentAngles;
-            newCenter = converter.ToCoord(nextPoint);*/
             scope.move_by_angles(currentAngles);    
             if (isplaying) {
-                //Shoot();
+                Shoot();
                 CalculateScore();
             }
             DoubleBuff(hwnd);
-            //fps++;
             InvalidateRect(hwnd, NULL, TRUE);
             RECT buttons_rect{ WINDOW_WIDTH - 295, WINDOW_HEIGHT - 150,WINDOW_WIDTH, WINDOW_HEIGHT };
             ValidateRect(hwnd, &buttons_rect);
@@ -602,14 +597,14 @@ LRESULT CALLBACK Game_WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPa
             logger_coords->start();
             logger_targets->start();
             ofstream file(GAMEINFOFILE, std::ios::app);
-            file << "[GAMEID" << game_id << "]";
+            file << "[GAMEID" << game_id << "]\n";
             file << "{ ""resolution"":" << WINDOW_WIDTH << "x" << WINDOW_HEIGHT \
                 << ", ""targetsAmount"":" << targets.size() \
                 << ", ""XAngle"":" << XAngle \
                 << ", ""YAngle"":" << YAngle \
                 << ", ""centerXAngle"":" << centerXAngle \
                 << ", ""centerYAngle"":" << centerYAngle << " }\n";
-            file << "[ENDGAME]";
+            file << "[ENDGAME]\n";
             file.close();
             game_id++;
             EnableWindow(hwndButtonRestartGame, FALSE);
@@ -625,7 +620,7 @@ LRESULT CALLBACK Game_WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPa
 }
 
 int DrawComponentsSettings(HWND hwnd, HINSTANCE hInstance) {
-    hwndLabelX = CreateWindowEx(0, L"STATIC", L"Colibrating X", WS_CHILD | WS_VISIBLE, 100, 10, 200, 20, hwnd, NULL, NULL, NULL);
+    hwndLabelX = CreateWindowEx(0, L"STATIC", L"Calibrating X", WS_CHILD | WS_VISIBLE, 100, 10, 200, 20, hwnd, NULL, NULL, NULL);
     
     hwndXTexbox = CreateWindow(
         L"EDIT",
@@ -1039,7 +1034,7 @@ LRESULT CALLBACK Settings_WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM
                     << ", ""YAngle"":" << YAngle \
                     << ", ""centerXAngle"":" << centerXAngle \
                     << ", ""centerYAngle"":" << centerYAngle << " }\n";
-                file << "[ENDGAME]";
+                file << "[ENDGAME]\n";
                 file.close();
                 game_id++;
                 EnableWindow(hwndButtonRestartGame, FALSE);
