@@ -17,16 +17,16 @@ public:
 	SoundController();
 	~SoundController();
 
-	HRESULT PlayGameOverSound();
+	HRESULT PlayInTargetSound();
 	HRESULT PlayMainTheme();
-	HRESULT PlayRowDeleteSound();
+	HRESULT PlayOutsideTargerSound();
 	HRESULT PauseAllSounds();
 	HRESULT PauseMainTheme();
 	HRESULT ResumeAllSounds();
 protected:
-	static constexpr const TCHAR* GAME_OVER_SOUND = TEXT("game_over_1.wav");
-	static constexpr const TCHAR* ROW_DELETE_SOUND = TEXT("beep_1.wav");
-	static constexpr const TCHAR* BACKGROUND_THEME = TEXT("tetris_theme_1.wav");
+	static constexpr const TCHAR* IN_TARGET_SOUND = TEXT("intarget.wav");
+	static constexpr const TCHAR* OUTSIDE_TARGET_SOUND = TEXT("outsidetarget.wav");
+	static constexpr const TCHAR* BACKGROUND_THEME = TEXT("gamemusic.wav");
 
 	SoundEngine* soundEngine;
 };

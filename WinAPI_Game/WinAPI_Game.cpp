@@ -22,6 +22,7 @@
 #include <random>
 #include "Connection.h"
 #include "Converter.h"
+#include "SoundController.h"
 #include "MyDefines.h"
 
 #pragma comment(lib, "ws2_32.lib")
@@ -87,6 +88,7 @@ Logger* logger_angles;
 Logger* logger_coords;
 Logger* logger_targets;
 HKEY hkey;
+SoundController sound;
 unsigned long long game_id;
 bool EnableStopX = false;
 bool EnableStopY = false;
@@ -184,6 +186,8 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
     if (hDataThread == NULL) {
         return 1;
     }
+    //sound.PlayOutsideTargerSound();
+    sound.PlayMainTheme();
     while (GetMessage(&msg, NULL, 0, 0)) {
         TranslateMessage(&msg);
         DispatchMessage(&msg);
@@ -367,6 +371,14 @@ void Shoot() {
         bullets[0] = Bullet(scope.getX() + 10, scope.getY() + 10);
         bullet_number = 1;
     }
+    int temp = current_target->getPoints(Point(scope.getX(), scope.getY()));
+    if (temp == 0) {
+        //sound.PlayOutsideTargerSound();
+    }
+    else {
+        //sound.PlayInTargetSound();
+    }
+    score += temp;
 }
 
 void InitializePhotos() {
@@ -446,10 +458,6 @@ void SwitchTarget() {
         isplaying = false;        
         EnableWindow(hwndButtonRestartGame, TRUE);
     }
-}
-
-void CalculateScore() {
-    score += current_target->getPoints(Point(scope.getX(), scope.getY()));
 }
 
 void FillBackground(HWND hwnd, HDC hdc) {
@@ -562,7 +570,6 @@ LRESULT CALLBACK Game_WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPa
             scope.move_by_angles(currentAngles);    
             if (isplaying) {
                 Shoot();
-                CalculateScore();
             }
             DoubleBuff(hwnd);
             InvalidateRect(hwnd, NULL, TRUE);
