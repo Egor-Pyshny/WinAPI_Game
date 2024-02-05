@@ -2,7 +2,7 @@
 #define UNICODE
 #endif 
 #define _USE_MATH_DEFINES
-
+//дописать в прицел разрешение экрана и делать проверку по разрешению на выход ха границы а не константе
 #include <WS2tcpip.h>
 #include <CommCtrl.h>
 #include <Windows.h>
@@ -174,20 +174,21 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
     else {
         game_id = id;
     }
-    logger_angles = new Logger(ANGLES, game_id);
+    MSG msg;
+    /*logger_angles = new Logger(ANGLES, game_id);
     logger_coords = new Logger(COORDS, game_id);
     logger_targets = new Logger(TARGETS, game_id);
-    scope.setLogger(logger_coords);
+    scope.setLogger(logger_coords);*/
     DrawComponentsSettings(hwndSettingsWindow, hInstance);
     ShowWindow(hwndSettingsWindow, nCmdShow);
     UpdateWindow(hwndSettingsWindow);
-    MSG msg;
     hDataThread = CreateThread(nullptr, 0, GetData, NULL, 0, nullptr);
     if (hDataThread == NULL) {
         return 1;
     }
     //sound.PlayOutsideTargerSound();
     sound.PlayMainTheme();
+    Sleep(1);
     while (GetMessage(&msg, NULL, 0, 0)) {
         TranslateMessage(&msg);
         DispatchMessage(&msg);
@@ -285,7 +286,7 @@ void PlaceTargetsRandom(){
         prev_target_width = target_width;
         prev_target_height = target_height;
     }
-    logger_targets->queues.targets_queue = &targets;
+   // logger_targets->queues.targets_queue = &targets;
 }
 
 void GenerateTargets() {
@@ -304,46 +305,46 @@ void GenerateTargets() {
 }
 
 DWORD WINAPI GetData(LPVOID lpParam) {
-    //int port = 8888;
-    //const char* ipAddressStr = "192.168.150.2";
-    //POINTFLOAT radianPoint;
-    //Connection сonnection(ipAddressStr,9998);
-    //connection.setLogger(logger_angles);
-    //bool connected = connection.Connect();
-    //if(connected){
-    //    while (true)
-    //    {
-    //        if (connection.NextXY(radianPoint))
-    //        {
-    //            currentAngles = { radianPoint.x * 180/(float)M_PI , radianPoint.y * 180 / (float)M_PI };
-    //            if (CenterCalibrated) {
-    //                currentAngles.x -= centerXAngle;
-    //                currentAngles.y -= centerYAngle;
-    //            }
-    //            /*if (isplaying) {
-    //                scope_x -= currentAngles.x;
-    //                scope_y -= currentAngles.y;
-    //            }*/
-    //            if (EnableStopX) {
-    //                minXAngle = currentAngles.x;
-    //                std::wstring floatString = std::to_wstring(XAngle);
-    //                SetWindowText(hwndXTexbox, floatString.c_str());
-    //            } 
-    //            if (EnableStopY) {
-    //                minYAngle = currentAngles.y;
-    //                std::wstring floatString = std::to_wstring(YAngle);
-    //                SetWindowText(hwndYTexbox, floatString.c_str());
-    //            } 
-    //            if (EnableStopCenter) {
-    //                centerYAngle = currentAngles.y;
-    //                centerXAngle = currentAngles.x;
-    //            }
-    //        }
-    //    }
-    //}
-    //else { 
-    //    return 1; 
-    //}
+    int port = 8888;
+    const char* ipAddressStr = "192.168.150.4";
+    POINTFLOAT radianPoint;
+    Connection сonnection(ipAddressStr,9998);
+    //сonnection.setLogger(logger_angles);
+    bool connected = сonnection.Connect();
+    if(connected){
+        while (true)
+        {
+            if (сonnection.NextXY(radianPoint))
+            {
+                currentAngles = { radianPoint.x * 180/(float)M_PI , radianPoint.y * 180 / (float)M_PI };
+                if (CenterCalibrated) {
+                    currentAngles.x -= centerXAngle;
+                    currentAngles.y -= centerYAngle;
+                }
+                /*if (isplaying) {
+                    scope_x -= currentAngles.x;
+                    scope_y -= currentAngles.y;
+                }*/
+                if (EnableStopX) {
+                    XAngle = currentAngles.x;
+                    std::wstring floatString = std::to_wstring(XAngle);
+                    SetWindowText(hwndXTexbox, floatString.c_str());
+                } 
+                if (EnableStopY) {
+                    YAngle = currentAngles.y;
+                    std::wstring floatString = std::to_wstring(YAngle);
+                    SetWindowText(hwndYTexbox, floatString.c_str());
+                } 
+                if (EnableStopCenter) {
+                    centerYAngle = currentAngles.y;
+                    centerXAngle = currentAngles.x;
+                }
+            }
+        }
+    }
+    else { 
+        return 1; 
+    }
     return 0;
 }
 
@@ -373,10 +374,10 @@ void Shoot() {
     }
     int temp = current_target->getPoints(Point(scope.getX(), scope.getY()));
     if (temp == 0) {
-        //sound.PlayOutsideTargerSound();
+        sound.PlayOutsideTargerSound();
     }
     else {
-        //sound.PlayInTargetSound();
+        sound.PlayInTargetSound();
     }
     score += temp;
 }
@@ -449,12 +450,12 @@ void SwitchTarget() {
     }
     else {
         KillTimer(hwndGameWindow, IDC_DRAWTIMER_ID);
-        logger_angles->finish();
+       /* logger_angles->finish();
         logger_coords->finish();
         logger_targets->finish();
         logger_angles->setGameId(game_id);
         logger_coords->setGameId(game_id);
-        logger_targets->setGameId(game_id);
+        logger_targets->setGameId(game_id);*/
         isplaying = false;        
         EnableWindow(hwndButtonRestartGame, TRUE);
     }
@@ -492,12 +493,12 @@ LRESULT CALLBACK Game_WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPa
     {
     case WM_DESTROY: {
         path.clear();
-        logger_angles->finish();
+        /*logger_angles->finish();
         logger_coords->finish();
         logger_targets->finish();
         logger_angles->setGameId(game_id);
         logger_coords->setGameId(game_id);
-        logger_targets->setGameId(game_id);        
+        logger_targets->setGameId(game_id);   */     
         ShowWindow(hwndSettingsWindow, SW_SHOWNORMAL);
         KillTimer(hwnd, IDC_FPSTIMER_ID);
         KillTimer(hwnd, IDC_DRAWTIMER_ID);
@@ -520,6 +521,7 @@ LRESULT CALLBACK Game_WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPa
             SetTimer(hwndGameWindow, IDC_FPSTIMER_ID, 15, NULL);
             return 0;
         }
+        
         break;
     }
     case WM_CREATE:
@@ -540,6 +542,12 @@ LRESULT CALLBACK Game_WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPa
         PAINTSTRUCT ps;
         HDC hdc = BeginPaint(hwnd, &ps);
         FillBackground(hwnd, hdcBuffer);
+
+        RECT buttons_rect{ WINDOW_WIDTH - 295, WINDOW_HEIGHT - 150,WINDOW_WIDTH, WINDOW_HEIGHT };
+        HBRUSH hBrush = CreateSolidBrush(RGB(255, 255, 255));
+        FillRect(hdc, &buttons_rect, hBrush);
+        DeleteObject(hBrush);
+
         DrawDivider(hdcBuffer);
         DrawScoreText(hdcBuffer);
         DrawTargetText(hdcBuffer);
@@ -597,9 +605,9 @@ LRESULT CALLBACK Game_WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPa
         case IDC_RESTART_BUTTON:
         {
             path.clear();
-            logger_angles->start();
+            /*logger_angles->start();
             logger_coords->start();
-            logger_targets->start();
+            logger_targets->start();*/
             ofstream file(GAMEINFOFILE, std::ios::app);
             file << "[GAMEID" << game_id << "]\n";
             file << "{ ""resolution"":" << WINDOW_WIDTH << "x" << WINDOW_HEIGHT \
@@ -873,7 +881,7 @@ void SetResolution(const wchar_t* resolution) {
         SetWindowLong(hwndGameWindow, GWL_STYLE, style & ~WS_OVERLAPPEDWINDOW);
         SetWindowPos(hwndGameWindow, HWND_TOP, 0, 0, GetSystemMetrics(SM_CXSCREEN), GetSystemMetrics(SM_CYSCREEN), SWP_FRAMECHANGED);
     }
-    
+    InvalidateRect(hwndGameWindow, NULL, NULL);
 }
 
 LRESULT CALLBACK Settings_WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
@@ -969,16 +977,17 @@ LRESULT CALLBACK Settings_WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM
         {
             int selectedIndex = SendMessage(hwndComboBox, CB_GETCURSEL, 0, 0);
             if (XCalibrated && YCalibrated && CenterCalibrated && selectedIndex != -1) {
+                
                 int textLength = GetWindowTextLength(hwndTargetsAmountTexbox) + 1;
                 if (textLength > 1) {
                     wchar_t* buffer = new wchar_t[textLength];
                     wchar_t* stopwcs;
                     GetWindowText(hwndTargetsAmountTexbox, buffer, textLength);
                     long l = wcstol(buffer, &stopwcs, 10);
-                    if (stopwcs[0] != '\0' || l == 0 || l >100) {
+                    if (stopwcs[0] != '\0' || l == 0 || l > 100) {
                         MessageBox(hwndSettingsWindow, L"Not valid targets amount", L"Error", MB_ICONWARNING | MB_OK);
                         break;
-                    }      
+                    }
                     targets_amount = l;
                 }
                 else {

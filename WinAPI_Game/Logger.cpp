@@ -4,6 +4,24 @@ Logger::Logger(int logger_type, DWORDLONG game_id)
 {
 	this->logger_type = logger_type;
 	this->game_id = game_id;
+	switch (logger_type) {
+		case ANGLES:
+		{
+			this->queues.angles_queue = new queue<POINTFLOAT>();
+			break;
+		}
+		case COORDS:
+		{
+			this->queues.coords_queue = new queue<POINT>();
+
+			break;
+		}
+		case TARGETS:
+		{
+			this->queues.targets_queue = new vector<target>();
+			break;
+		}
+	}
 }
 
 Logger::~Logger()
@@ -15,6 +33,7 @@ Logger::~Logger()
 
 bool Logger::start()
 {
+	return false;
 	if (!started) {
 		started = true;
 		this->log = true;

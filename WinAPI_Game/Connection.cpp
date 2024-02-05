@@ -93,7 +93,7 @@ bool Connection::GetCoord(float& coord)
 		return FALSE;
 	}
 
-	coord = reinterpret_cast<float*>(buffer)[0];
+	coord = *reinterpret_cast<float*>(buffer);
 
 	return TRUE;
 }
